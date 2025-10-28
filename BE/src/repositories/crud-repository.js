@@ -63,6 +63,35 @@ class CrudRepository {
             throw error;
         }
     }
+
+    async findOne(field, data) {
+        try {
+            const res = await this.model.findOne({
+                where: {
+                    [field]: data
+                }
+            });
+            return res;
+        } catch (error) {
+            console.error("Error in CRUD (findOne):", error);
+            throw error;
+        }
+    }
+
+
+    async findOneWithAttributes(field, data, attributes) {
+    try {
+        const user = await this.model.findOne({
+            where: { [field]: data },
+            attributes: attributes // Chọn hoặc loại bỏ các trường
+        });
+        return user;
+    } catch (error) {
+        console.error("Error in UserRepository (findOneWithAttributes):", error);
+        throw error;
+    }
+}
+    
 }
 
 module.exports = CrudRepository;

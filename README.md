@@ -1,5 +1,5 @@
 ### BOOKING FLIGHT PROJECT
 - `MEMBER`: HOANG TRUNG HIEU , NGUYEN GIA HUY , TRAN MINH GIAP 
-###BE 
+### BE 
 - `ORM`: Sequelize  
 - Sử dụng Sequelize cli đồng bộ db  

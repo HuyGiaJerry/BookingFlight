@@ -3,6 +3,7 @@ node_modules/
 .env
 src/config/config.json
 BE/src/config/config.json
+combined.log
 .DS_Store
 dist/
 npm-debug.log

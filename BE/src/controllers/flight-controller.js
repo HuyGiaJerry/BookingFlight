@@ -1,6 +1,7 @@
-const {StatusCodes} = require('http-status-codes');
-const {FlightService} = require('../services');
-const {createSuccessResponse} = require('../utils/common/create-responses');
+const { StatusCodes } = require('http-status-codes');
+const { FlightService } = require('../services');
+const { createSuccessResponse } = require('../utils/common/create-responses');
+const { FlightTransformer } = require('../transformers')
 
 const flightService = new FlightService();
 
@@ -12,13 +13,15 @@ async function createFlight(req, res, next) {
     } catch (error) {
         next(error);
     }
-} 
+}
 
 
 async function getAllFlights(req, res, next) {
     try {
         const flights = await flightService.getAllFlights();
-        const response = createSuccessResponse(flights, 'Flights retrieved successfully');
+        const transformedFlights = FlightTransformer.transformFlightList(flights);
+        const response = createSuccessResponse(transformedFlights, 'Flights retrieved successfully');
+
         return res.status(StatusCodes.OK).json(response);
     } catch (error) {
         next(error);
@@ -29,7 +32,8 @@ async function getAllFlights(req, res, next) {
 async function getFlightById(req, res, next) {
     try {
         const flight = await flightService.getFlightById(req.params.id);
-        const response = createSuccessResponse(flight, 'Get Flight by Id retrieved successfully');
+        const transformedFlight = FlightTransformer.transformSingleFlight(flight);
+        const response = createSuccessResponse(transformedFlight, 'Get Flight by Id retrieved successfully');
         return res.status(StatusCodes.OK).json(response);
     } catch (error) {
         next(error);

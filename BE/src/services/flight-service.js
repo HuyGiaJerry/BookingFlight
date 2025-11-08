@@ -1,6 +1,7 @@
 const { StatusCodes } = require('http-status-codes');
 const { FlightRepository } = require('../repositories');
 const AppError = require('../utils/errors/app-error');
+const {FlightTransformer} = require('../transformers');
 const moment = require('moment');
 
 class FlightService {
@@ -31,7 +32,7 @@ class FlightService {
     }
 
     async getAllFlights() {
-        return this.flightRepository.getAll();
+        return this.flightRepository.getAllWithDetails();
     }
 
     async getFlightById(flightId) {
@@ -55,28 +56,6 @@ class FlightService {
         const deleted = await this.flightRepository.destroy(flightId);
         if (!deleted) throw new AppError('Flight not found', StatusCodes.NOT_FOUND);
         return deleted;
-    }
-
-    transformFlightData(flights) {
-        return flights.map(flight => ({
-            flight_id: flight.id,
-            flight_number: flight.flight_number,
-            duration: flight.duration,
-            base_price: flight.base_price,
-            flight_status: flight.flight_status,
-            airplane: flight.airplane,
-            departure_airport: flight.departureAirport,
-            arrival_airport: flight.arrivalAirport,
-            schedules: flight.schedules.map(schedule => ({
-                schedule_id: schedule.id,
-                departure_time: schedule.departure_time,
-                arrival_time: schedule.arrival_time,
-                price: schedule.price,
-                available_seat: schedule.available_seat,
-                flight_schedule_status: schedule.flight_schedule_status,
-                fares: schedule.dataValues?.fares || schedule.fares || [] // Lấy fares từ dataValues hoặc fares
-            }))
-        }));
     }
 
     async searchFlights(searchCriteria) {
@@ -166,7 +145,7 @@ class FlightService {
             throw new AppError('No flights found for the given criteria', StatusCodes.NOT_FOUND);
         }
 
-        return this.transformFlightData(flights);
+        return FlightTransformer.transformFlightData(flights);
     }
 
     async searchRoundTripFlights(criteria) {
@@ -206,8 +185,8 @@ class FlightService {
         }
 
         return {
-            outbound: flights.outbound.length > 0 ? this.transformFlightData(flights.outbound) : [],
-            inbound: flights.inbound.length > 0 ? this.transformFlightData(flights.inbound) : []
+            outbound: flights.outbound.length > 0 ? FlightTransformer.transformFlightData(flights.outbound) : [],
+            inbound: flights.inbound.length > 0 ? FlightTransformer.transformFlightData(flights.inbound) : []
         };
     }
 }

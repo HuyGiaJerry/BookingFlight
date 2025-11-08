@@ -21,7 +21,9 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: ''
     },
     phone_number: DataTypes.STRING,
+    email: DataTypes.STRING,
     password: DataTypes.STRING,
+    logo_url: DataTypes.STRING,
     address: DataTypes.STRING,
     google_id: DataTypes.INTEGER,
     facebook_id: DataTypes.INTEGER,

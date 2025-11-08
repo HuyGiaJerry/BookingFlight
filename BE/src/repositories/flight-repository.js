@@ -43,6 +43,42 @@ class FlightRepository extends CrudRepository {
     }
 
 
+    async getAllWithDetails(){
+        try {
+            const flights = await Flight.findAll({
+                include: [
+                    {
+                        model: Airport,
+                        as: 'departureAirport',
+                        attributes: ['id', 'iata_code', 'name', 'city', 'country']
+                    },
+                    {
+                        model: Airport,
+                        as: 'arrivalAirport',
+                        attributes: ['id', 'iata_code', 'name', 'city', 'country']
+                    },
+                    {
+                        model: Airplane,
+                        as: 'airplane',
+                        attributes: ['id', 'model', 'seat_capacity'],
+                        include: [
+                            {
+                                model: Airline,
+                                as: 'airline',
+                                attributes: ['id', 'name', 'logo_url', 'code']
+                            }
+                        ]
+                    }
+                ]
+            });
+            return flights;
+        } catch (error) {
+            console.error('❌ Error fetching flights:', error);
+            throw error;
+        }
+    }
+
+
     async findAvailableFlights(fromAirportId, toAirportId, date, classType) {
         try {
             console.log('🔍 Repository - Search params:', {

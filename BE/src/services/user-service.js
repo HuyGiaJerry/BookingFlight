@@ -1,11 +1,6 @@
-
 const { UserRepository,SessionRepository } = require('../repositories');
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-
-const ACCESS_KEY_TTL = '1h'; // TTL : TIme To Live
-const REFRESH_KEY_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in seconds
+const TokenService = require('./token-service');
 
 class UserService {
     constructor({ userRepo,sessionRepo }) {
@@ -63,18 +58,14 @@ class UserService {
                 throw new Error('User or password không đúng !');
             }
             // nếu khớp tạo access token
-            const accessToken = jwt.sign(
-                {userId: user.id},
-                process.env.ACCESS_KEY_SECRET,
-                {expiresIn: ACCESS_KEY_TTL}
-            )
+            const accessToken = TokenService.createAccessToken({ userId: user.id });
             // tạo refresh token
-            const refreshToken = crypto.randomBytes(64).toString('hex');
+            const refreshToken = TokenService.createRefreshToken();
             
             // tạo session mới lưu refresh token 
             await this.sessionRepository.create({
                 refresh_token: refreshToken,
-                expire_at: new Date(Date.now() + REFRESH_KEY_TTL),
+                expire_at: new Date(Date.now() + TokenService.getRefreshTokenTTL()),
                 user_id: user.id
             })
             return {accessToken, refreshToken};

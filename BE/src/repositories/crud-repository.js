@@ -52,12 +52,15 @@ class CrudRepository {
     async update(id, data) //data = obj
     {
         try {
-            const res = await this.model.update(data, {
+            const [rowEffected] = await this.model.update(data, {
                 where: {
                     id: id
                 }
             });
-            return res;
+            if(rowEffected === 0) {
+                return null;
+            }
+            return await this.model.findByPk(id);
         } catch (error) {
             console.error("Error in CRUD (update):", error);
             throw error;
@@ -74,6 +77,20 @@ class CrudRepository {
             return res;
         } catch (error) {
             console.error("Error in CRUD (findOne):", error);
+            throw error;
+        }
+    }
+
+    async findAllWithField(field, data) {
+        try {
+            const res = await this.model.findAll({
+                where: {
+                    [field]: data
+                }
+            });
+            return res;
+        } catch (error) {
+            console.error("Error in CRUD (findAllWithField):", error);
             throw error;
         }
     }

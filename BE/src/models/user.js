@@ -25,7 +25,12 @@ module.exports = (sequelize, DataTypes) => {
     address: DataTypes.STRING,
     google_id: DataTypes.INTEGER,
     facebook_id: DataTypes.INTEGER,
-    is_active: DataTypes.INTEGER
+    is_active: DataTypes.INTEGER,
+    role: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'customer'
+    }
   }, {
     sequelize,
     modelName: 'User',

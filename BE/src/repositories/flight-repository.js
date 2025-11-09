@@ -146,7 +146,7 @@ class FlightRepository extends CrudRepository {
             return {
                 outbound: outboundFlights,
                 inbound: inboundFlights,
-                combined: roundTripResults
+                combined: roundTripResults // cai loz gi day hieu ? cop' it thoi ? 
             };
 
         } catch (error) {

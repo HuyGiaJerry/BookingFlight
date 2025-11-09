@@ -7,7 +7,7 @@ function errorHandler(err, req, res, next) {
     // Lỗi do AppError do mình ném ra
     if (err.statusCode) {
         const response = createErrorResponse(err.message);
-         return res.status(err.statusCode).json(response);
+        return res.status(err.statusCode).json(response);
     }
 
     // Nếu là lỗi sequelize validation 

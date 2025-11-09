@@ -1,6 +1,7 @@
 const { StatusCodes } = require('http-status-codes');
 const { FlightRepository } = require('../repositories');
 const AppError = require('../utils/errors/app-error');
+const { FlightTransformer } = require('../transformers');
 const moment = require('moment');
 
 class FlightService {
@@ -10,7 +11,7 @@ class FlightService {
 
     async createFlight(data) {
         try {
-            const { flight_number, departure_airport_id, arrival_airport_id, airplane_id, duration, base_price, flight_status } = data; // Sửa từ airline_id thành airplane_id
+            const { flight_number, departure_airport_id, arrival_airport_id, airplane_id, duration, base_price, flight_status } = data;
             if (!flight_number || !departure_airport_id || !arrival_airport_id || !airplane_id) {
                 throw new AppError('Missing required flight fields', StatusCodes.BAD_REQUEST);
             }
@@ -18,7 +19,7 @@ class FlightService {
                 flight_number,
                 departure_airport_id,
                 arrival_airport_id,
-                airplane_id, // Sửa từ airline_id thành airplane_id
+                airplane_id,
                 duration,
                 base_price,
                 flight_status
@@ -57,29 +58,9 @@ class FlightService {
         return deleted;
     }
 
-    transformFlightData(flights) {
-        return flights.map(flight => ({
-            flight_id: flight.id,
-            flight_number: flight.flight_number,
-            duration: flight.duration,
-            base_price: flight.base_price,
-            flight_status: flight.flight_status,
-            airplane: flight.airplane,
-            departure_airport: flight.departureAirport,
-            arrival_airport: flight.arrivalAirport,
-            schedules: flight.schedules.map(schedule => ({
-                schedule_id: schedule.id,
-                departure_time: schedule.departure_time,
-                arrival_time: schedule.arrival_time,
-                price: schedule.price,
-                available_seat: schedule.available_seat,
-                flight_schedule_status: schedule.flight_schedule_status,
-                fares: schedule.dataValues?.fares || schedule.fares || [] // Lấy fares từ dataValues hoặc fares
-            }))
-        }));
-    }
+    
 
-      async searchFlights(searchCriteria) {
+    async searchFlights(searchCriteria) {
         try {
             const {
                 trip_type,
@@ -191,7 +172,7 @@ class FlightService {
             throw new AppError('No flights found for the given criteria', StatusCodes.NOT_FOUND);
         }
 
-        return this.transformFlightData(flights);
+        return FlightTransformer.transformFlightData(flights);
     }
 
     async searchRoundTripFlights(criteria) {
@@ -211,14 +192,15 @@ class FlightService {
         });
 
         // Nếu 1 trong 2 chiều không có chuyến → báo lỗi
-        if ((!flights.outbound || flights.outbound.length === 0) || 
+        if ((!flights.outbound || flights.outbound.length === 0) ||
             (!flights.inbound || flights.inbound.length === 0)) {
             throw new AppError('No round-trip flights found for the given criteria', StatusCodes.NOT_FOUND);
         }
 
         return {
-            outbound: this.transformFlightData(flights.outbound),
-            inbound: this.transformFlightData(flights.inbound)
+            outbound: FlightTransformer.transformFlightData(flights.outbound),
+            inbound: FlightTransformer.transformFlightData(flights.inbound)
+            // combined: flights.combined
         };
     }
 }

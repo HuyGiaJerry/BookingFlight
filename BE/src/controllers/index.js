@@ -7,4 +7,5 @@ module.exports = {
     FlightController: require('./flight-controller'),
     FlightScheduleController: require('./flightschedule-controller'),
     FlightScheduleFareController: require('./flightschedulefare-controller'),
+    OAuthController: require('./oauth-controller'),
 }

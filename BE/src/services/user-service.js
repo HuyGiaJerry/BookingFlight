@@ -1,9 +1,10 @@
-const { UserRepository,SessionRepository } = require('../repositories');
+const { UserRepository, SessionRepository } = require('../repositories');
 const bcrypt = require('bcrypt');
 const TokenService = require('./token-service');
-
+const AppError = require('../utils/errors/app-error');
+const { StatusCodes } = require('http-status-codes');
 class UserService {
-    constructor({ userRepo,sessionRepo }) {
+    constructor({ userRepo, sessionRepo }) {
         this.userRepository = userRepo || new UserRepository();
         this.sessionRepository = sessionRepo || new SessionRepository();
     }
@@ -34,7 +35,7 @@ class UserService {
                 facebook_id: 0,
                 is_active: 1
             })
-            return ;
+            return;
         } catch (error) {
             throw error;
         }
@@ -43,33 +44,33 @@ class UserService {
 
     async signIn(data, options = {}) {
         try {
-            
-            const {phone_number, password} = data;
-            if(!phone_number || !password){
+
+            const { phone_number, password } = data;
+            if (!phone_number || !password) {
                 throw new Error('Thiếu thông tin đăng nhập !');
             }
             // so sánh hashed pass với pass input
             const user = await this.userRepository.findByPhoneNumber(phone_number);
-            if(!user){
+            if (!user) {
                 throw new Error('User or password không đúng !');
             }
-            const passwordMatch = await bcrypt.compare(password, user.password); 
-            if(!passwordMatch){
+            const passwordMatch = await bcrypt.compare(password, user.password);
+            if (!passwordMatch) {
                 throw new Error('User or password không đúng !');
             }
             // nếu khớp tạo access token
             const accessToken = TokenService.createAccessToken({ userId: user.id });
             // tạo refresh token
             const refreshToken = TokenService.createRefreshToken();
-            
+
             // tạo session mới lưu refresh token 
             await this.sessionRepository.create({
                 refresh_token: refreshToken,
                 expire_at: new Date(Date.now() + TokenService.getRefreshTokenTTL()),
                 user_id: user.id
             })
-            return {accessToken, refreshToken};
-            
+            return { accessToken, refreshToken };
+
         } catch (error) {
             throw error;
         }
@@ -96,6 +97,63 @@ class UserService {
             return await this.userRepository.findOneWithAttributes('id', userId, { exclude: ['password'] });
         } catch (error) {
             throw error;
+        }
+    }
+
+    async findByGoogleId(google_id) {
+        try {
+            return await this.userRepository.findOneWithAttributes('google_id', google_id, { exclude: ['password'] });
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async findByEmail(email) {
+        try {
+            return await this.userRepository.findOneWithAttributes('email', email, { exclude: ['password'] });
+        } catch (error) {
+            throw new AppError('Internal Server Error', StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    async updateUser(id, data) {
+        try {
+            const updateUser = this.userRepository.get(id);
+            if (!updateUser) throw new AppError('User không tồn tại !', StatusCodes.NOT_FOUND);
+            return await this.userRepository.update(id, data);
+        } catch (error) {
+            if (error instanceof AppError) throw error;
+            throw new AppError('Internal Server Error', StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async createUser(data) {
+        try {
+            const { fullname, email, google_id, logo_url } = data;
+
+            const newUser = await this.userRepository.create({
+                fullname,
+                email,
+                google_id,
+                facebook_id: 0,
+                is_active: 1,
+                logo_url
+            });
+            return newUser;
+        } catch (error) {
+            if (error instanceof AppError) throw error;
+            throw new AppError('Internal Server Error', StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async saveRefreshToken(data) {
+        try {
+            await this.sessionRepository.deleteByUserId(data.user_id);
+            return await this.sessionRepository.create(data);
+        } catch (error) {
+            console.error('Error saving refresh token:', error);
+            throw new AppError('Failed to save refresh token', StatusCodes.INTERNAL_SERVER_ERROR);
         }
     }
 

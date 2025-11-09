@@ -32,6 +32,7 @@ async function signIn(req, res) {
             sameSite: 'none',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
+        // Lưu refresh token vào db
 
         return res
             .status(StatusCodes.OK)

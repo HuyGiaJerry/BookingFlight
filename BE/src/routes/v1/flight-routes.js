@@ -1,6 +1,6 @@
-const expess = require('express');
+const express = require('express');
 const {FlightController} = require('../../controllers');
-const router = expess.Router();
+const router = express.Router();
 
 router.post('/', FlightController.createFlight);
 router.get('/search', FlightController.searchFlights);

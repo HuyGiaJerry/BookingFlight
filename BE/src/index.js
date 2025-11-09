@@ -19,6 +19,6 @@ app.use(ErrorHandler);
 
 
 app.listen(ServerConfig.PORT, () => {
-    console.log(`Server is running on port: ${ServerConfig.PORT}`);
+    console.log(`Server is running on port: http://localhost:${ServerConfig.PORT}`);
     // Logger.info("Successfully started the server", "root", {});
 });

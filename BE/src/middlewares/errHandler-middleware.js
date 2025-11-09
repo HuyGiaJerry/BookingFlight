@@ -7,7 +7,7 @@ function errorHandler(err, req, res, next) {
     // Lỗi do AppError do mình ném ra
     if (err.statusCode) {
         const response = createErrorResponse(err.message);
-        res.status(err.statusCode).json(response);
+         return res.status(err.statusCode).json(response);
     }
 
     // Nếu là lỗi sequelize validation 
@@ -19,7 +19,7 @@ function errorHandler(err, req, res, next) {
 
     // Lỗi không xác định
     const response = createErrorResponse('Internal Server Error');
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(response);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(response);
 
 }
 

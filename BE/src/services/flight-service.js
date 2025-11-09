@@ -79,7 +79,7 @@ class FlightService {
         }));
     }
 
-    async searchFlights(searchCriteria) {
+      async searchFlights(searchCriteria) {
         try {
             const {
                 trip_type,
@@ -87,36 +87,70 @@ class FlightService {
                 to_airport_id,
                 departure_date,
                 return_date,
-                class_type
+                class_type,
+                passenger_count = 1,
+                infant_count = 0,
+                page = 1,
+                limit = 10
             } = searchCriteria;
 
-            console.log('🚀 Service - Search criteria:', searchCriteria);
-
-            // Validate trip_type
             const validTripTypes = ['one-way', 'round-trip'];
             if (!trip_type || !validTripTypes.includes(trip_type)) {
                 throw new AppError('Invalid trip_type. Valid values are: one-way, round-trip', StatusCodes.BAD_REQUEST);
             }
 
-            let result;
+            if (!from_airport_id || !to_airport_id || !departure_date) {
+                throw new AppError('Missing required fields: from_airport_id, to_airport_id, departure_date', StatusCodes.BAD_REQUEST);
+            }
 
+            if (infant_count > passenger_count) {
+                throw new AppError('Number of infants cannot exceed number of adults', StatusCodes.BAD_REQUEST);
+            }
+
+            const departureMoment = moment(departure_date, 'YYYY-MM-DD', true);
+            if (!departureMoment.isValid()) {
+                throw new AppError('Invalid departure_date format. Use YYYY-MM-DD', StatusCodes.BAD_REQUEST);
+            }
+
+            let result;
             switch (trip_type) {
                 case 'one-way':
                     result = await this.searchOneWayFlights({
                         from_airport_id,
                         to_airport_id,
                         departure_date,
-                        class_type
+                        class_type,
+                        passenger_count,
+                        infant_count,
+                        page,
+                        limit
                     });
                     break;
 
                 case 'round-trip':
+                    if (!return_date) {
+                        throw new AppError('Missing required field: return_date for round-trip', StatusCodes.BAD_REQUEST);
+                    }
+
+                    const returnMoment = moment(return_date, 'YYYY-MM-DD', true);
+                    if (!returnMoment.isValid()) {
+                        throw new AppError('Invalid return_date format. Use YYYY-MM-DD', StatusCodes.BAD_REQUEST);
+                    }
+
+                    if (returnMoment.isBefore(departureMoment)) {
+                        throw new AppError('Return date must be after departure date', StatusCodes.BAD_REQUEST);
+                    }
+
                     result = await this.searchRoundTripFlights({
                         from_airport_id,
                         to_airport_id,
                         departure_date,
                         return_date,
-                        class_type
+                        class_type,
+                        passenger_count,
+                        infant_count,
+                        page,
+                        limit
                     });
                     break;
 
@@ -125,42 +159,33 @@ class FlightService {
             }
 
             return {
+                success: true,
                 trip_type,
                 search_criteria: searchCriteria,
                 results: result
             };
 
         } catch (error) {
-            console.error('❌ Service error:', error);
             if (error instanceof AppError) throw error;
             throw new AppError('Unable to search flights', StatusCodes.INTERNAL_SERVER_ERROR);
         }
     }
 
     async searchOneWayFlights(criteria) {
-        const { from_airport_id, to_airport_id, departure_date, class_type } = criteria;
+        const { from_airport_id, to_airport_id, departure_date, class_type, passenger_count = 1, infant_count = 0, page = 1, limit = 10 } = criteria;
 
-        console.log('🔍 Service - One way search:', criteria);
+        // Chỉ tính ghế cho người lớn, trẻ em dưới 2 tuổi không tính
+        const requiredSeats = passenger_count;
 
-        // Validate required fields
-        if (!from_airport_id || !to_airport_id || !departure_date) {
-            throw new AppError('Missing required fields for one-way trip: from_airport_id, to_airport_id, departure_date', StatusCodes.BAD_REQUEST);
-        }
-
-        // Validate date format
-        const formattedDate = moment(departure_date, 'YYYY-MM-DD', true);
-        if (!formattedDate.isValid()) {
-            throw new AppError('Invalid departure_date format. Please use YYYY-MM-DD', StatusCodes.BAD_REQUEST);
-        }
-
-        const flights = await this.flightRepository.findAvailableFlights(
+        const flights = await this.flightRepository.findAvailableFlights({
             from_airport_id,
             to_airport_id,
-            formattedDate.format('YYYY-MM-DD'),
-            class_type
-        );
-
-        console.log('✈️ Service - Found flights:', flights.length);
+            departure_date,
+            seat_class: class_type,
+            passenger_count: requiredSeats,
+            page,
+            limit
+        });
 
         if (!flights || flights.length === 0) {
             throw new AppError('No flights found for the given criteria', StatusCodes.NOT_FOUND);
@@ -170,44 +195,30 @@ class FlightService {
     }
 
     async searchRoundTripFlights(criteria) {
-        const { from_airport_id, to_airport_id, departure_date, return_date, class_type } = criteria;
+        const { from_airport_id, to_airport_id, departure_date, return_date, class_type, passenger_count = 1, infant_count = 0, page = 1, limit = 10 } = criteria;
 
-        console.log('🔄 Service - Round trip search:', criteria);
+        const requiredSeats = passenger_count;
 
-        // Validate required fields
-        if (!from_airport_id || !to_airport_id || !departure_date || !return_date) {
-            throw new AppError('Missing required fields for round-trip: from_airport_id, to_airport_id, departure_date, return_date', StatusCodes.BAD_REQUEST);
-        }
-
-        // Validate date formats
-        const formattedDepartureDate = moment(departure_date, 'YYYY-MM-DD', true);
-        const formattedReturnDate = moment(return_date, 'YYYY-MM-DD', true);
-
-        if (!formattedDepartureDate.isValid() || !formattedReturnDate.isValid()) {
-            throw new AppError('Invalid date format. Please use YYYY-MM-DD', StatusCodes.BAD_REQUEST);
-        }
-
-        // Validate return date is after departure date
-        if (formattedReturnDate.isBefore(formattedDepartureDate)) {
-            throw new AppError('Return date must be after departure date', StatusCodes.BAD_REQUEST);
-        }
-
-        const flights = await this.flightRepository.findRoundTripFlights(
+        const flights = await this.flightRepository.findRoundTripFlights({
             from_airport_id,
             to_airport_id,
-            formattedDepartureDate.format('YYYY-MM-DD'),
-            formattedReturnDate.format('YYYY-MM-DD'),
-            class_type
-        );
+            departure_date,
+            return_date,
+            seat_class: class_type,
+            passenger_count: requiredSeats,
+            page,
+            limit
+        });
 
-        if ((!flights.outbound || flights.outbound.length === 0) &&
+        // Nếu 1 trong 2 chiều không có chuyến → báo lỗi
+        if ((!flights.outbound || flights.outbound.length === 0) || 
             (!flights.inbound || flights.inbound.length === 0)) {
-            throw new AppError('No flights found for the given criteria', StatusCodes.NOT_FOUND);
+            throw new AppError('No round-trip flights found for the given criteria', StatusCodes.NOT_FOUND);
         }
 
         return {
-            outbound: flights.outbound.length > 0 ? this.transformFlightData(flights.outbound) : [],
-            inbound: flights.inbound.length > 0 ? this.transformFlightData(flights.inbound) : []
+            outbound: this.transformFlightData(flights.outbound),
+            inbound: this.transformFlightData(flights.inbound)
         };
     }
 }

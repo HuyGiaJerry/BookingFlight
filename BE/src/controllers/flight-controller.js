@@ -58,14 +58,20 @@ async function deleteFlight(req, res, next) {
 }
 
 async function searchFlights(req, res, next) {
-    try {
+    // try {
+        console.log('Controller - Search criteria:', req.query);
+
         const searchCriteria = req.query; // Lấy parameters từ query string
+        
+        console.log('passeger count:', searchCriteria.passenger_count);
+
         const flights = await flightService.searchFlights(searchCriteria);
+
         const response = createSuccessResponse(flights, 'Flights search completed successfully');
         return res.status(StatusCodes.OK).json(response);
-    } catch (error) {
-        next(error);
-    }
+    // } catch (error) {
+    //     next(error);
+    // }
 }
 
 module.exports = {

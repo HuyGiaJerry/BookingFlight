@@ -19,12 +19,17 @@ module.exports = (sequelize, DataTypes) => {
       // BookingService belongs to ExtraService
       BookingService.belongsTo(models.ExtraService, { foreignKey: 'service_id', as: 'extraService' });
 
+      // BookingService belongs to Passenger
+      BookingService.belongsTo(models.Passenger, { foreignKey: 'passenger_id', as: 'passenger' });
+
     }
   }
   BookingService.init({
     booking_id: DataTypes.INTEGER,
     flight_schedule_id: DataTypes.INTEGER,
-    service_id: DataTypes.INTEGER
+    passenger_id: DataTypes.INTEGER,
+    service_id: DataTypes.INTEGER,
+    quantity: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'BookingService',

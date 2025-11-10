@@ -11,10 +11,11 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // FlightScheduleFare belongs to FlightSchedule
-      FlightScheduleFare.belongsTo(models.FlightSchedule, {
-        foreignKey: 'flight_schedule_id',
-        as: 'flightSchedule'
-      });
+      FlightScheduleFare.belongsTo(models.FlightSchedule, {foreignKey: 'flight_schedule_id',as: 'flightSchedule'});
+      
+      // FlightScheduleFare has many Tickets
+      FlightScheduleFare.hasMany(models.Ticket, { foreignKey: 'fare_id', as: 'tickets' });
+
     }
   }
   FlightScheduleFare.init({

@@ -19,9 +19,6 @@ module.exports = (sequelize, DataTypes) => {
       // Booking có nhiều BookingServices
       Booking.hasMany(models.BookingService, { foreignKey: 'booking_id', as: 'services' });
 
-      // Booking có nhiều BookingPassengers
-      Booking.hasMany(models.BookingPassenger, { foreignKey: 'booking_id', as: 'passengers' }); 
-
       // Booking has one Payment
       Booking.hasOne(models.Payment, { foreignKey: 'booking_id', as: 'payment' });
 

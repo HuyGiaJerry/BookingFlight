@@ -13,11 +13,9 @@ module.exports = (sequelize, DataTypes) => {
       // 1 AirplaneSeatLayout thuộc về 1 Airplane
       AirplaneSeatLayout.belongsTo(models.Airplane, { foreignKey: 'airplane_id', as: 'airplane' });
 
-      // 1 AirplaneSeatLayout có nhiều có nhiều Seat 
-      AirplaneSeatLayout.hasMany(models.Seat, { foreignKey: 'layout_id', as: 'seats' });
+      // 1 AirplaneSeatLayout có nhiều có nhiều Seat
+      AirplaneSeatLayout.hasMany(models.Seat, { foreignKey: 'layout_seat_id', as: 'seats' });
 
-      // 1 AirplaneSeatLayout có nhiều Tickets
-      AirplaneSeatLayout.hasMany(models.Ticket, { foreignKey: 'layout_seat_id', as: 'tickets' });
     }
   }
   AirplaneSeatLayout.init({

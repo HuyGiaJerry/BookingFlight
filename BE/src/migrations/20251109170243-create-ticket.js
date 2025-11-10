@@ -39,10 +39,19 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      layout_seat_id: {
+      seat_id: {
         type: Sequelize.INTEGER,
         references: {
-          model: 'AirplaneSeatLayouts',
+          model: 'Seats',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      },
+      fare_id: {
+        type: Sequelize.INTEGER,
+        references: {
+          model: 'FlightScheduleFares',
           key: 'id'
         },
         onUpdate: 'CASCADE',

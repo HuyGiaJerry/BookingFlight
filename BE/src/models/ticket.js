@@ -19,8 +19,8 @@ module.exports = (sequelize, DataTypes) => {
       // Ticket belongs to Passenger
       Ticket.belongsTo(models.Passenger, { foreignKey: 'passenger_id',  as: 'passenger' });
 
-      // Ticket belongs to AirplaneLayoutSeat
-      Ticket.belongsTo(models.AirplaneSeatLayout, { foreignKey: 'layout_seat_id', as: 'airplaneSeatLayout' });
+      // Ticket belongs to Seat
+      Ticket.belongsTo(models.Seat, { foreignKey: 'seat_id', as: 'seat' });
     }
   }
   Ticket.init({
@@ -28,7 +28,9 @@ module.exports = (sequelize, DataTypes) => {
     booking_id: DataTypes.INTEGER,
     flight_schedule_id: DataTypes.INTEGER,
     passenger_id: DataTypes.INTEGER,
-    layout_seat_id: DataTypes.INTEGER,
+    seat_id: DataTypes.INTEGER,
+    fare_id: DataTypes.INTEGER,
+    // layout_seat_id: DataTypes.INTEGER,
     ticket_status: DataTypes.STRING
   }, {
     sequelize,

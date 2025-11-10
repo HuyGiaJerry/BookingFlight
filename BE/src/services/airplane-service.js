@@ -26,11 +26,11 @@ class AirplaneService {
     }
 
     async getAllAirplanes() {
-        return this.airplaneRepository.getAll();
+        return this.airplaneRepository.getAllWithDetails();
     }
 
     async getAirplaneByAirplaneId(airplaneId) {
-        const airplane = await this.airplaneRepository.get(airplaneId);
+        const airplane = await this.airplaneRepository.getAirplaneByIdWithDetails(airplaneId);
         if (!airplane) throw new AppError('Airplane not found', StatusCodes.NOT_FOUND);
         return airplane;
     }

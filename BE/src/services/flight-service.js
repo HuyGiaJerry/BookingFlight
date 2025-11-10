@@ -58,8 +58,6 @@ class FlightService {
         return deleted;
     }
 
-    
-
     async searchFlights(searchCriteria) {
         try {
             const {

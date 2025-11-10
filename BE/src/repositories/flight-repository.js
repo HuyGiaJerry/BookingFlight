@@ -6,6 +6,7 @@ class FlightRepository extends CrudRepository {
     constructor() {
         super(Flight);
     }
+    
 
     // Tìm chuyến bay 1 chiều (one-way) có phân trang
     async findAvailableFlights({ from_airport_id, to_airport_id, departure_date, seat_class, passenger_count, infant_count = 0, page = 1, limit = 10 }) {
@@ -24,10 +25,7 @@ class FlightRepository extends CrudRepository {
             const seatsNeeded = adultCount; // Trẻ em <2 tuổi không tính ghế
 
             const flights = await Flight.findAll({
-                where: {
-                    departure_airport_id: from_airport_id,
-                    arrival_airport_id: to_airport_id
-                },
+                where: {departure_airport_id: from_airport_id,arrival_airport_id: to_airport_id},
                 attributes: ['id', 'flight_number', 'duration', 'base_price', 'flight_status', 'airplane_id', 'departure_airport_id', 'arrival_airport_id'],
                 include: [
                     {

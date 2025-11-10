@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
       Ticket.belongsTo(models.Passenger, { foreignKey: 'passenger_id',  as: 'passenger' });
 
       // Ticket belongs to AirplaneLayoutSeat
-      Ticket.belongsTo(models.AirplaneLayoutSeat, { foreignKey: 'layout_seat_id', as: 'airplaneSeatLayout' });
+      Ticket.belongsTo(models.AirplaneSeatLayout, { foreignKey: 'layout_seat_id', as: 'airplaneSeatLayout' });
     }
   }
   Ticket.init({

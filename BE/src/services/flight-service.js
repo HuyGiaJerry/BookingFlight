@@ -32,7 +32,7 @@ class FlightService {
     }
 
     async getAllFlights() {
-        return this.flightRepository.getAll();
+        return this.flightRepository.getAllWithDetails();
     }
 
     async getFlightById(flightId) {

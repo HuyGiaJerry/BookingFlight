@@ -47,7 +47,7 @@ class FlightScheduleService {
 
     async getAllFlightSchedules() {
         try {
-            return await this.flightScheduleRepository.getAll();
+            return await this.flightScheduleRepository.getAllFlightSchedules();
         } catch (error) {
             throw new AppError('Unable to retrieve flight schedules', StatusCodes.INTERNAL_SERVER_ERROR);
         }

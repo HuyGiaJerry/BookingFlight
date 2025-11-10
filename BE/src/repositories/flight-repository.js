@@ -6,9 +6,75 @@ class FlightRepository extends CrudRepository {
     constructor() {
         super(Flight);
     }
-    
+    async getFlightByIdWithDetails(flightId) {
+        try {
+            const flight = await Flight.findByPk(flightId, {
+                include: [
+                    {
+                        model: Airport,
+                        as: 'departureAirport',
+                        attributes: ['id', 'iata_code', 'name', 'city', 'country']
+                    },
+                    {
+                        model: Airport,
+                        as: 'arrivalAirport',
+                        attributes: ['id', 'iata_code', 'name', 'city', 'country']
+                    },
+                    {
+                        model: Airplane,
+                        as: 'airplane',
+                        attributes: ['id', 'model', 'seat_capacity'],
+                        include: [
+                            {
+                                model: Airline,
+                                as: 'airline',
+                                attributes: ['id', 'name', 'logo_url', 'code']
+                            }
+                        ]
+                    }
+                ]
+            });
+            return flight;
+        } catch (error) {
+            throw error;
+        }
+    }
+    async getAllWithDetails(){
+        try {
+            const flights = await Flight.findAll({
+                include: [
+                    {
+                        model: Airport,
+                        as: 'departureAirport',
+                        attributes: ['id', 'iata_code', 'name', 'city', 'country']
+                    },
+                    {
+                        model: Airport,
+                        as: 'arrivalAirport',
+                        attributes: ['id', 'iata_code', 'name', 'city', 'country']
+                    },
+                    {
+                        model: Airplane,
+                        as: 'airplane',
+                        attributes: ['id', 'model', 'seat_capacity'],
+                        include: [
+                            {
+                                model: Airline,
+                                as: 'airline',
+                                attributes: ['id', 'name', 'logo_url', 'code']
+                            }
+                        ]
+                    }
+                ]
+            });
+            return flights;
+        } catch (error) {
+            console.error(' Error fetching flights:', error);
+            throw error;
+        }
+    }
 
-    // Tìm chuyến bay 1 chiều (one-way) có phân trang
+    // Tìm chuyến bay 1 chiều (one-way) 
     async findAvailableFlights({ from_airport_id, to_airport_id, departure_date, seat_class, passenger_count, infant_count = 0, page = 1, limit = 10 }) {
         try {
             const pageNum = parseInt(page, 10) || 1;
@@ -144,7 +210,7 @@ class FlightRepository extends CrudRepository {
             return {
                 outbound: outboundFlights,
                 inbound: inboundFlights,
-                combined: roundTripResults // cai loz gi day hieu ? cop' it thoi ? 
+                combined: roundTripResults
             };
 
         } catch (error) {

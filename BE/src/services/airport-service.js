@@ -31,16 +31,25 @@ class AirportService {
         return this.airportRepository.getAll();
     }
 
+    async getAllAirportsPaginated(page = 1, limit = 10) {
+        page = parseInt(page);
+        limit = parseInt(limit);
+        if (isNaN(page) || page < 1) page = 1;
+        if (isNaN(limit) || limit < 1) limit = 10;
+        console.log('Service - page:', page, 'limit:', limit);
+        return this.airportRepository.getAllPagination(page, limit, {}, [['id', 'ASC']]);
+    }
+
     async getAirportById(airportId) {
         const airport = await this.airportRepository.get(airportId);
         if (!airport) throw new AppError('Airport not found', StatusCodes.NOT_FOUND);
         return airport;
     }
 
-    async searchAirports(query) {
+    async searchAirports(query, page = 1, limit = 10) {
         try {
-            if(!query) throw new AppError('Search query is required', StatusCodes.BAD_REQUEST);
-            const airports = await this.airportRepository.searchAirports(query);
+            if (!query) throw new AppError('Search query is required', StatusCodes.BAD_REQUEST);
+            const airports = await this.airportRepository.searchAirports(query, page, limit);
             return airports;
         } catch (error) {
             if (error instanceof AppError) throw error;

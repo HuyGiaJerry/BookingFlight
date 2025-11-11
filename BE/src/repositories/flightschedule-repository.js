@@ -7,9 +7,12 @@ class FlightScheduleRepository extends CrudRepository {
         super(FlightSchedule);
     }
 
-    async getAllFlightSchedules() {
+    async getAllFlightSchedules(page = 1, limit = 10) {
         try {
-            const flightSchedules = await FlightSchedule.findAll({
+            const offset = (page - 1) * limit;
+            const pageNum = parseInt(page) || 1;
+            const limitNum = parseInt(limit) || 10;
+            const { count, rows: flightSchedules } = await FlightSchedule.findAndCountAll({
                 attributes: ['id', 'departure_time', 'arrival_time', 'available_seat', 'price', 'flight_schedule_status'],
                 include: [
                     {
@@ -17,9 +20,20 @@ class FlightScheduleRepository extends CrudRepository {
                         as: 'flight',
                         attributes: ['id', 'flight_number', 'departure_airport_id', 'arrival_airport_id', 'airplane_id', 'duration', 'base_price', 'flight_status']
                     }
-                ]
+                ],
+                limit: limitNum,
+                offset: offset,
+                orderBy: [['id', 'ASC']]
             });
-            return flightSchedules;
+            const pagination = {
+                totalPages: Math.ceil(count / limitNum),
+                currentPage: pageNum,
+                limit: limitNum,
+            }
+            return {
+                pagination,
+                flightSchedules
+            };
         }
         catch (error) {
             throw error;

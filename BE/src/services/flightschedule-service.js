@@ -45,9 +45,11 @@ class FlightScheduleService {
         }
     }
 
-    async getAllFlightSchedules() {
+    async getAllFlightSchedules(page = 1, limit = 10) {
         try {
-            return await this.flightScheduleRepository.getAllFlightSchedules();
+            const pageNum = parseInt(page) || 1;
+            const limitNum = parseInt(limit) || 10;
+            return await this.flightScheduleRepository.getAllFlightSchedules(pageNum, limitNum);
         } catch (error) {
             throw new AppError('Unable to retrieve flight schedules', StatusCodes.INTERNAL_SERVER_ERROR);
         }

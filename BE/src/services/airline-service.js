@@ -25,9 +25,11 @@ class AirlineService {
     }
 
 
-    async getAllAirlines(){
-        return this.airlineRepository.getAll();
+    async getAllAirlines(page = 1, limit = 10, filters = {}, order = [['id', 'ASC']]){
+        return this.airlineRepository.getAllPagination(page, limit, filters , order);
     }
+
+
 
     async getAirlineById(airlineId){
             const airline = await this.airlineRepository.get(airlineId);

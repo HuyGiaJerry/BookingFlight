@@ -1,6 +1,8 @@
 const CrudRepository = require('./crud-repository');
 const { Flight, FlightSchedule, Airport, FlightScheduleFare, Airline, Airplane, Seat } = require('../models');
 const { Op } = require('sequelize');
+const { error } = require('winston');
+const { FlightTransformer } = require('../transformers');
 
 class FlightRepository extends CrudRepository {
     constructor() {
@@ -39,9 +41,12 @@ class FlightRepository extends CrudRepository {
             throw error;
         }
     }
-    async getAllWithDetails(){
+    async getAllWithDetails(page = 1, limit = 10) {
         try {
-            const flights = await Flight.findAll({
+            const offset = (page - 1) * limit;
+            const pageNum = parseInt(page) || 1;
+            const limitNum = parseInt(limit) || 10;
+            const { count, rows: flights } = await Flight.findAndCountAll({
                 include: [
                     {
                         model: Airport,
@@ -65,9 +70,21 @@ class FlightRepository extends CrudRepository {
                             }
                         ]
                     }
-                ]
+                ],
+                limit: limitNum,
+                offset: offset,
+                order: [['id', 'ASC']]
             });
-            return flights;
+            const pagination = {
+                totalPages: Math.ceil(count / limitNum),
+                currentPage: pageNum,
+                limit: limitNum,
+            }
+            const data = FlightTransformer.transformFlightList(flights);
+            return {
+                data,
+                pagination
+            }
         } catch (error) {
             console.error(' Error fetching flights:', error);
             throw error;
@@ -91,7 +108,7 @@ class FlightRepository extends CrudRepository {
             const seatsNeeded = adultCount; // Trẻ em <2 tuổi không tính ghế
 
             const flights = await Flight.findAll({
-                where: {departure_airport_id: from_airport_id,arrival_airport_id: to_airport_id},
+                where: { departure_airport_id: from_airport_id, arrival_airport_id: to_airport_id },
                 attributes: ['id', 'flight_number', 'duration', 'base_price', 'flight_status', 'airplane_id', 'departure_airport_id', 'arrival_airport_id'],
                 include: [
                     {
@@ -112,7 +129,7 @@ class FlightRepository extends CrudRepository {
                                 model: Seat,
                                 as: 'seats',
                                 where: { seat_status: 'available' },
-                                attributes: ['id', 'seat_status', 'layout_id', 'price_override', 'flight_schedule_id'],
+                                attributes: ['id', 'seat_status', 'layout_seat_id', 'price_override', 'flight_schedule_id'],
                                 required: false
                             },
                             {
@@ -124,14 +141,14 @@ class FlightRepository extends CrudRepository {
                             }
                         ]
                     },
-                    { 
-                        model: Airplane, 
-                        as: 'airplane', 
+                    {
+                        model: Airplane,
+                        as: 'airplane',
                         attributes: ['id', 'model', 'seat_capacity', 'airline_id'],
-                        include: [{ model: Airline, as: 'airline', attributes: ['id', 'name', 'logo_url', 'code'] }] 
+                        include: [{ model: Airline, as: 'airline', attributes: ['id', 'name', 'logo_url', 'code'] }]
                     },
                     { model: Airport, as: 'departureAirport', attributes: ['id', 'name', 'iata_code', 'city', 'country'] },
-                    { model: Airport, as: 'arrivalAirport', attributes: ['id', 'name', 'iata_code', 'city', 'country']  }
+                    { model: Airport, as: 'arrivalAirport', attributes: ['id', 'name', 'iata_code', 'city', 'country'] }
                 ],
                 offset,
                 limit: limitNum
@@ -164,7 +181,7 @@ class FlightRepository extends CrudRepository {
             const pageNum = parseInt(page, 10) || 1;
             const limitNum = parseInt(limit, 10) || 10;
 
-            console.log('🔄 Repository - Round trip search:', {
+            console.log('Repository - Round trip search:', {
                 from_airport_id, to_airport_id, departure_date, return_date, seat_class, passenger_count, infant_count, page: pageNum, limit: limitNum
             });
 

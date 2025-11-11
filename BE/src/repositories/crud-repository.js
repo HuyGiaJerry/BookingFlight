@@ -19,7 +19,7 @@ class CrudRepository {
                 where: {
                     id: data
                 }
-            }); 
+            });
             return res;
         } catch (error) {
             console.error("Error in CRUD (destroy):", error);
@@ -57,7 +57,7 @@ class CrudRepository {
                     id: id
                 }
             });
-            if(rowEffected === 0) {
+            if (rowEffected === 0) {
                 return null;
             }
             return await this.model.findByPk(id);
@@ -97,18 +97,41 @@ class CrudRepository {
 
 
     async findOneWithAttributes(field, data, attributes) {
-    try {
-        const user = await this.model.findOne({
-            where: { [field]: data },
-            attributes: attributes // Chọn hoặc loại bỏ các trường
-        });
-        return user;
-    } catch (error) {
-        console.error("Error in UserRepository (findOneWithAttributes):", error);
-        throw error;
+        try {
+            const user = await this.model.findOne({
+                where: { [field]: data },
+                attributes: attributes // Chọn hoặc loại bỏ các trường
+            });
+            return user;
+        } catch (error) {
+            console.error("Error in UserRepository (findOneWithAttributes):", error);
+            throw error;
+        }
     }
-}
-    
+    async getAllPagination(page = 1, limit =  10, where = {} , order = [['id', 'ASC']]){
+        try {
+            const offset = (page - 1) * limit;
+            const { count, rows } = await this.model.findAndCountAll({
+                where,
+                order,
+                offset,
+                limit
+            });
+            console.log("Pagination Result:", { count, rows, page, limit, offset });
+            return {
+                data: rows,
+                pagination: {
+                    currentPage: page,
+                    limit: limit,
+                    totalPages: Math.ceil(count / limit),
+                }
+            }
+        }
+        catch (error) {
+            console.error("Error in CRUD (getAllPagination):", error);
+            throw error;
+        }
+    }
 }
 
 module.exports = CrudRepository;

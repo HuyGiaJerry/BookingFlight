@@ -34,11 +34,14 @@ async function getFlightScheduleById(req, res, next) {
 
 async function getAllFlightSchedules(req, res, next) {
     try {
-        const flightSchedules = await flightScheduleService.getAllFlightSchedules();
+        const page = req.query.page || 1;
+        const limitNum = req.query.limit || 10;
+        const {flightSchedules, pagination } = await flightScheduleService.getAllFlightSchedules(page, limitNum);
         return res.status(StatusCodes.OK).json({
             success: true,
+            message: 'Flight schedules retrieved successfully',
+            pagination,
             data: flightSchedules,
-            message: 'Flight schedules retrieved successfully'
         });
     } catch (error) {
         next(error);

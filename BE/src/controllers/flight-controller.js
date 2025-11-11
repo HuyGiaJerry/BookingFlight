@@ -18,11 +18,18 @@ async function createFlight(req, res, next) {
 
 async function getAllFlights(req, res, next) {
     try {
-        const flights = await flightService.getAllFlights();
-        const transformedFlights = FlightTransformer.transformFlightList(flights);
-        const response = createSuccessResponse(transformedFlights, 'Flights retrieved successfully');
+        const page = req.query.page || 1;
+        const limitNum = req.query.limit || 10;
+        const { data, pagination} = await flightService.getAllFlights(page, limitNum);
+        // const transformedFlights = FlightTransformer.transformFlightList(data);
+        // const response = createSuccessResponse(transformedFlights, 'Flights retrieved successfully');
 
-        return res.status(StatusCodes.OK).json(response);
+        return res.status(StatusCodes.OK).json({
+            success: true,
+            message: 'Flights retrieved successfully',
+            data,
+            pagination
+        });
     } catch (error) {
         next(error);
     }

@@ -4,7 +4,7 @@ class AirlineRepository extends CrudRepository {
     constructor(){
         super(Airline);
     }
-
+    
 
 }
 

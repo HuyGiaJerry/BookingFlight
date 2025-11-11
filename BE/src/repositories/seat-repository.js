@@ -40,10 +40,6 @@ class SeatRepository extends CrudRepository {
             seat_status: 'available'
         })
     }
-
-
-
-
 }
 
 module.exports = SeatRepository;

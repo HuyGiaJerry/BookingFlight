@@ -1,5 +1,5 @@
-const {StatusCodes} = require('http-status-codes');
-const {AirportService} = require('../services');
+const { StatusCodes } = require('http-status-codes');
+const { AirportService } = require('../services');
 
 const airportService = new AirportService();
 
@@ -17,7 +17,14 @@ async function createAirport(req, res, next) {
 
 async function getAllAirports(req, res, next) {
     try {
-        const airports = await airportService.getAllAirports();
+        console.log('query params', req.query);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        
+        const airports = await airportService.getAllAirportsPaginated(
+            page, limit
+        
+        );
         return res
             .status(StatusCodes.OK)
             .json(airports);
@@ -26,7 +33,7 @@ async function getAllAirports(req, res, next) {
     }
 }
 
-async function getAirportById(req, res ,next) {
+async function getAirportById(req, res, next) {
     try {
         const airport = await airportService.getAirportById(req.params.id);
         return res
@@ -40,19 +47,21 @@ async function getAirportById(req, res ,next) {
 async function searchAirports(req, res, next) {
     try {
         const keyword = req.query.keyword || '';
-        const data = await airportService.searchAirports(keyword);
-        return res 
-        .status(StatusCodes.OK).json({
-            success: true,
-            data: data,
-            message: 'Airports fetched successfully'
-        })
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const data = await airportService.searchAirports(keyword, page, limit);
+        return res
+            .status(StatusCodes.OK).json({
+                success: true,
+                data: data,
+                message: 'Airports fetched successfully'
+            })
     } catch (error) {
         next(error);
     }
 }
 
-async function updateAirport(req, res,next) {
+async function updateAirport(req, res, next) {
     try {
         const updatedAirport = await airportService.updateAirport(req.params.id, req.body);
         return res

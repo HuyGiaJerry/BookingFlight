@@ -160,7 +160,7 @@ class FlightService {
         // Chỉ tính ghế cho người lớn, trẻ em dưới 2 tuổi không tính
         const requiredSeats = passenger_count;
 
-        const flights = await this.flightRepository.findAvailableFlights({
+        const { data, pagination} = await this.flightRepository.findAvailableFlights({
             from_airport_id,
             to_airport_id,
             departure_date,
@@ -171,11 +171,14 @@ class FlightService {
             limit
         });
 
-        if (!flights || flights.length === 0) {
+        if (!data || data.length === 0) {
             throw new AppError('No flights found for the given criteria', StatusCodes.NOT_FOUND);
         }
 
-        return FlightTransformer.transformFlightData(flights);
+        return {
+            data: FlightTransformer.transformFlightData(data),
+            pagination
+        };
     }
 
     async searchRoundTripFlights(criteria) {
@@ -183,28 +186,44 @@ class FlightService {
 
         const requiredSeats = passenger_count;
 
-        const flights = await this.flightRepository.findRoundTripFlights({
-            from_airport_id,
-            to_airport_id,
-            departure_date,
-            return_date,
-            seat_class: class_type,
-            passenger_count: requiredSeats,
-            infant_count,
-            page,
-            limit
-        });
-
+        const [ outbound, inbound] = await Promise.all([
+            this.flightRepository.findAvailableFlights({
+                from_airport_id,
+                to_airport_id,
+                departure_date,
+                seat_class: class_type,
+                passenger_count: requiredSeats,
+                infant_count,
+                page,
+                limit
+            }),
+            this.flightRepository.findAvailableFlights({
+                from_airport_id: to_airport_id,
+                to_airport_id: from_airport_id,
+                departure_date: return_date,
+                seat_class: class_type,
+                passenger_count: requiredSeats,
+                infant_count,
+                page,
+                limit
+            })
+        ])
         // Nếu 1 trong 2 chiều không có chuyến → báo lỗi
-        if ((!flights.outbound || flights.outbound.length === 0) ||
-            (!flights.inbound || flights.inbound.length === 0)) {
+        if ((!outbound.data || outbound.data.length === 0) ||
+            (!inbound.data || inbound.data.length === 0)) {
             throw new AppError('No round-trip flights found for the given criteria', StatusCodes.NOT_FOUND);
         }
 
         return {
-            outbound: FlightTransformer.transformFlightData(flights.outbound),
-            inbound: FlightTransformer.transformFlightData(flights.inbound)
             // combined: flights.combined
+            outbound: {
+                data: FlightTransformer.transformFlightData(outbound.data),
+                pagination: outbound.pagination
+            },
+            inbound: {
+                data: FlightTransformer.transformFlightData(inbound.data),
+                pagination: inbound.pagination
+            }
         };
     }
 }

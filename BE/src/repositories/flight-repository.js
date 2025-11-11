@@ -107,7 +107,7 @@ class FlightRepository extends CrudRepository {
 
             const seatsNeeded = adultCount; // Trẻ em <2 tuổi không tính ghế
 
-            const flights = await Flight.findAll({
+            const { count, rows: flights} = await Flight.findAndCountAll({
                 where: { departure_airport_id: from_airport_id, arrival_airport_id: to_airport_id },
                 attributes: ['id', 'flight_number', 'duration', 'base_price', 'flight_status', 'airplane_id', 'departure_airport_id', 'arrival_airport_id'],
                 include: [
@@ -151,7 +151,9 @@ class FlightRepository extends CrudRepository {
                     { model: Airport, as: 'arrivalAirport', attributes: ['id', 'name', 'iata_code', 'city', 'country'] }
                 ],
                 offset,
-                limit: limitNum
+                limit: limitNum,
+                distinct: true,
+                order: [['id', 'ASC']]
             });
 
             // Filter schedules đủ ghế cho adultCount
@@ -167,7 +169,15 @@ class FlightRepository extends CrudRepository {
                 return flight;
             }).filter(f => f.schedules.length > 0);
 
-            return filteredFlights;
+            const totalPages = Math.ceil(count / limitNum);
+            return {
+                data: filteredFlights,
+                pagination: {
+                    totalPages,
+                    currentPage: pageNum,
+                    limit: limitNum
+                }
+            };
 
         } catch (error) {
             console.error('Repository error in findAvailableFlights:', error);

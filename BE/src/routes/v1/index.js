@@ -9,6 +9,7 @@ const flightRouter = require('./flight-routes');
 const flightScheduleRouter = require('./flightschedule-routes');
 const flightScheduleFareRouter = require('./flightschedulefare-routes');
 const oauthRouter = require('./oauth-routes');
+const bookingRouter = require('./booking-routes');
 const {ProtectedRoutes} = require('../../middlewares');
 const router = express.Router();
 
@@ -22,6 +23,7 @@ router.use('/flights', flightRouter);
 router.use('/flight-schedules', flightScheduleRouter);
 router.use('/flight-schedule-fares', flightScheduleFareRouter);
 router.use('/oauth', oauthRouter);
+router.use('/bookings', bookingRouter);
 // test router
 router.get('/home', HomeController.home);
 

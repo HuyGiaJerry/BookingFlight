@@ -8,5 +8,6 @@ module.exports = {
     FlightScheduleService: require('./flightschedule-service'),
     FlightScheduleFareService: require('./flightschedulefare-service'),
     TokenService: require('./token-service'),
-    OAuthService: require('./oauth-service')
+    OAuthService: require('./oauth-service'),
+    BookingService: require('./booking-service')
 }

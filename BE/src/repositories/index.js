@@ -6,5 +6,11 @@ module.exports = {
     AirportRepository: require('./airport-repository'),
     AirlineRepository: require('./airline-repository'),
     AirplaneRepository: require('./airplane-repository'),
-    FlightScheduleFareRepository: require('./flightschedulefare-repository')
+    FlightScheduleFareRepository: require('./flightschedulefare-repository'),
+    SeatRepository: require('./seat-repository'),
+    PassengerRepository: require('./passenger-repository'),
+    BookingRepository: require('./booking-repository'),
+    TicketRepository: require('./ticket-repository'),
+    BookingServiceRepository: require('./bookingservice-repository'),
+    ExtraServiceRepository: require('./extraservice-repository'),
 }

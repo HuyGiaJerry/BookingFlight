@@ -23,7 +23,7 @@ class SeatRepository extends CrudRepository {
                     flight_schedule_id: flightScheduleId,
                     seat_status: 'available'
                 },
-                include: [{ model: AirplaneSeatLayout, as: 'layoutSeat', attributes: ['seat_number', 'seat_type', 'seat_position'],required: false }],
+                include: [{ model: AirplaneSeatLayout, as: 'layoutSeat', attributes: ['seat_number', 'seat_type', 'seat_position'], required: false }],
                 order: [['seat_number', 'ASC']]
             });
             console.log('Seats found:', seats.length);

@@ -31,8 +31,10 @@ class FlightService {
         }
     }
 
-    async getAllFlights() {
-        return this.flightRepository.getAllWithDetails();
+    async getAllFlights(page = 1, limit = 10) {
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit) || 10;
+        return this.flightRepository.getAllWithDetails(pageNum, limitNum);
     }
 
     async getFlightById(flightId) {
@@ -57,6 +59,8 @@ class FlightService {
         if (!deleted) throw new AppError('Flight not found', StatusCodes.NOT_FOUND);
         return deleted;
     }
+
+    
 
     async searchFlights(searchCriteria) {
         try {
@@ -162,6 +166,7 @@ class FlightService {
             departure_date,
             seat_class: class_type,
             passenger_count: requiredSeats,
+            infant_count,
             page,
             limit
         });
@@ -185,6 +190,7 @@ class FlightService {
             return_date,
             seat_class: class_type,
             passenger_count: requiredSeats,
+            infant_count,
             page,
             limit
         });

@@ -18,7 +18,12 @@ async function createAirline(req, res, next) {
 
 async function getAllAirlines(req, res, next) {
     try {
-        const airlines = await airlineService.getAllAirlines();
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        
+        const order = [['id', 'ASC']];
+        const airlines = await airlineService.getAllAirlines(page, limit);
+        
         return res
             .status(StatusCodes.OK)
             .json(airlines);

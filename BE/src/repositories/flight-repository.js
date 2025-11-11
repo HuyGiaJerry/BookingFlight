@@ -112,7 +112,7 @@ class FlightRepository extends CrudRepository {
                                 model: Seat,
                                 as: 'seats',
                                 where: { seat_status: 'available' },
-                                attributes: ['id', 'seat_status', 'layout_id', 'price_override', 'flight_schedule_id'],
+                                attributes: ['id', 'seat_status', 'layout_seat_id', 'price_override', 'flight_schedule_id'],
                                 required: false
                             },
                             {

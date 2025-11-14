@@ -4,38 +4,50 @@ const {
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class FlightSchedule extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
+    
     static associate(models) {
-      // 1 FlightSchedule thuộc về 1 Flight
+      // 1 FlightSchedule belongs to 1 Flight
       FlightSchedule.belongsTo(models.Flight, { foreignKey: 'flight_id', as: 'flight' });
 
-      // 1 FlightSchedule có nhiều Seats
-      FlightSchedule.hasMany(models.Seat, { foreignKey: 'flight_schedule_id', as: 'seats' });
+      // 1 FlightSchedule uses 1 Airplane
+      FlightSchedule.belongsTo(models.Airplane, { foreignKey: 'airplane_id', as: 'airplane' });
 
-      // 1 FlightSchedule có nhiều FlightScheduleFares
-      FlightSchedule.hasMany(models.FlightScheduleFare, { foreignKey: 'flight_schedule_id', as: 'fares' });
+      // 1 FlightSchedule has many FlightFares
+      FlightSchedule.hasMany(models.FlightFare, { foreignKey: 'flight_schedule_id', as: 'flightFares' });
 
-      // 1 FlightSchedule có nhiều BookingFlightSchedules
-      FlightSchedule.hasMany(models.BookingFlightSchedule, { foreignKey: 'flight_schedule_id', as: 'bookingFlightSchedules' });
+      // 1 FlightSchedule has many FlightSeats
+      FlightSchedule.hasMany(models.FlightSeat, { foreignKey: 'flight_schedule_id', as: 'flightSeats' });
 
-      // 1 FlightSchedule có nhiều BookingServices
-      FlightSchedule.hasMany(models.BookingService, { foreignKey: 'flight_schedule_id', as: 'bookingServices' });
-
-      // 1 FlightSchedule có nhiều Tickets
-      FlightSchedule.hasMany(models.Ticket, { foreignKey: 'flight_schedule_id', as: 'tickets' });
     }
   }
   FlightSchedule.init({
     flight_id: DataTypes.INTEGER,
-    departure_time: DataTypes.DATE,
-    arrival_time: DataTypes.DATE,
-    price: DataTypes.DOUBLE,
-    available_seat: DataTypes.INTEGER,
-    flight_schedule_status: DataTypes.STRING
+    airplane_id: DataTypes.INTEGER,
+    departure_time: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      validate: {
+        isDate: {
+          msg: "Departure time must be a valid date"
+        },
+        notNull: {
+          msg: "Departure time is required"
+        }
+      }
+    },
+    arrival_time: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      validate: {
+        isDate: {
+          msg: "Arrival time must be a valid date"
+        },
+        notNull: {
+          msg: "Arrival time is required"
+        }
+      }
+    },
+    status: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'FlightSchedule',

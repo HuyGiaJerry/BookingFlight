@@ -4,32 +4,52 @@ const {
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Flight extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
-    static associate(models) {
-      // 1 Flight có nhiều FlightSchedule
-      Flight.hasMany(models.FlightSchedule, { foreignKey: 'flight_id', as: 'schedules' });
 
-      // Flight thuộc về 1 Airport (departure)
+    static associate(models) {
+      // 1 Flight belongs to 1 Airline
+      Flight.belongsTo(models.Airline, { foreignKey: 'airline_id', as: 'airline' });
+
+      // 1 Flight departs from 1 Airport
       Flight.belongsTo(models.Airport, { foreignKey: 'departure_airport_id', as: 'departureAirport' });
-      // Flight thuộc về 1 Airport (arrival)
+
+      // 1 Flight arrives at 1 Airport
       Flight.belongsTo(models.Airport, { foreignKey: 'arrival_airport_id', as: 'arrivalAirport' });
 
-      // 1 Flight thuộc về 1 Airplane
-      Flight.belongsTo(models.Airplane, { foreignKey: 'airplane_id', as: 'airplane' });
+      // 1 Flight has many FlightSchedules
+      Flight.hasMany(models.FlightSchedule, { foreignKey: 'flight_id', as: 'flightSchedules' });
     }
   }
   Flight.init({
-    flight_number: DataTypes.STRING,
+    airline_id: DataTypes.INTEGER,
+    flight_number: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: {
+          msg: "Flight number cannot be empty"
+        }
+      }
+    },
     departure_airport_id: DataTypes.INTEGER,
     arrival_airport_id: DataTypes.INTEGER,
-    airplane_id: DataTypes.INTEGER,
-    duration: DataTypes.INTEGER,
-    base_price: DataTypes.DOUBLE,
-    flight_status: DataTypes.STRING
+    duration_minutes: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      validate: {
+        isInt: {
+          msg: "Duration must be an integer"
+        },
+        min: {
+          args: [1],
+          msg: "Duration must be at least 1 minute"
+        },
+        notNull: {
+          msg: "Duration is required"
+        }
+      }
+    },
+    status: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'Flight',

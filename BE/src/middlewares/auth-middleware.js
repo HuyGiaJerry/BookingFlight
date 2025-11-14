@@ -1,44 +1,44 @@
-const jwt = require('jsonwebtoken');
-const {StatusCodes} = require('http-status-codes');
-const {UserService} = require('../services');
-const { UserRepository, SessionRepository } = require('../repositories');
+// const jwt = require('jsonwebtoken');
+// const { StatusCodes } = require('http-status-codes');
+// const { UserService } = require('../services');
+// const { UserRepository, SessionRepository } = require('../repositories');
 
-const userService = new UserService({
-    userRepo: new UserRepository(),
-    sessionRepo: new SessionRepository()
-});
+// const userService = new UserService({
+//     userRepo: new UserRepository(),
+//     sessionRepo: new SessionRepository()
+// });
 
 
-// authorization middleware to protect routes
-const protectedRoutes = (req, res, next) => {
-    try {
-        // Lấy token từ header
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
+// // authorization middleware to protect routes
+// const protectedRoutes = (req, res, next) => {
+//     try {
+//         // Lấy token từ header
+//         const authHeader = req.headers['authorization'];
+//         const token = authHeader && authHeader.split(' ')[1];
 
-        if(!token) {
-            return res.status(StatusCodes.UNAUTHORIZED).json({ error: 'Unauthorized' });
-        }
-        // xác nhận token hợp lệ 
-        jwt.verify(token, process.env.ACCESS_KEY_SECRET, async (err, decodedUser) => {
-            if(err) {
-                return res.status(StatusCodes.FORBIDDEN).json({ error: 'Forbidden' });
-            }
-            // tìm user 
-            const existingUser = await userService.getUserById(decodedUser.userId);
+//         if (!token) {
+//             return res.status(StatusCodes.UNAUTHORIZED).json({ error: 'Unauthorized' });
+//         }
+//         // xác nhận token hợp lệ 
+//         jwt.verify(token, process.env.ACCESS_KEY_SECRET, async (err, decodedUser) => {
+//             if (err) {
+//                 return res.status(StatusCodes.FORBIDDEN).json({ error: 'Forbidden' });
+//             }
+//             // tìm user 
+//             const existingUser = await userService.getUserById(decodedUser.userId);
 
-            if(!existingUser) {
-                return res.status(StatusCodes.UNAUTHORIZED).json({ error: 'Unauthorized' });
-            }
-            // trả về user cho req
-            req.user = existingUser;
-            next();
-        })
-        
-    } catch (error) {
-        console.error('Error in auth middleware:', error);
-        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
-    }
-}
+//             if (!existingUser) {
+//                 return res.status(StatusCodes.UNAUTHORIZED).json({ error: 'Unauthorized' });
+//             }
+//             // trả về user cho req
+//             req.user = existingUser;
+//             next();
+//         })
 
-module.exports = protectedRoutes
+//     } catch (error) {
+//         console.error('Error in auth middleware:', error);
+//         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
+//     }
+// }
+
+// module.exports = protectedRoutes

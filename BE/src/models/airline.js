@@ -4,20 +4,38 @@ const {
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Airline extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
+
     static associate(models) {
-      // 1 Airline có nhiều Airplane
+      // 1 Airline has many Airplanes
       Airline.hasMany(models.Airplane, { foreignKey: 'airline_id', as: 'airplanes' });
+
+      // 1 Airline has many Flights
+      Airline.hasMany(models.Flight, { foreignKey: 'airline_id', as: 'flights' });
     }
   }
   Airline.init({
-    name: DataTypes.STRING,
-    logo_url: DataTypes.STRING,
-    code: DataTypes.STRING
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notEmpty: {
+          msg: "Airline name cannot be empty"
+        }
+      }
+    },
+
+    iata_code: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: {
+          msg: "IATA code cannot be empty"
+        }
+      }
+    },
+
+    logo_url: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'Airline',

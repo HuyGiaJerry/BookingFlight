@@ -3,3 +3,5 @@
 ### BE 
 - `ORM`: Sequelize  
 - Sử dụng Sequelize cli đồng bộ db  
+
+- `DATA_BASE`: MySQL + RailWay

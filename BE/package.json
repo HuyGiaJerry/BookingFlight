@@ -8,7 +8,47 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon --watch . --ext js,json --exec node src/index.js"
+    "dev": "nodemon --watch . --ext js,json --exec node src/index.js",
+    "//": "=== DATABASE CONNECTION TESTS ===",
+    "test:db:local": "cross-env NODE_ENV=development node test-db-connection.js",
+    "test:db:railway": "cross-env NODE_ENV=production node test-railway-connection.js",
+    "test:db:both": "npm run test:db:local && npm run test:db:railway",
+    "//": "=== LOCAL DATABASE (Development) ===",
+    "db:create:local": "cross-env NODE_ENV=development npx sequelize-cli db:create",
+    "db:drop:local": "cross-env NODE_ENV=development npx sequelize-cli db:drop",
+    "db:migrate:local": "cross-env NODE_ENV=development npx sequelize-cli db:migrate",
+    "db:migrate:undo:local": "cross-env NODE_ENV=development npx sequelize-cli db:migrate:undo",
+    "db:migrate:undo:all:local": "cross-env NODE_ENV=development npx sequelize-cli db:migrate:undo:all",
+    "db:migrate:status:local": "cross-env NODE_ENV=development npx sequelize-cli db:migrate:status",
+    "db:seed:local": "cross-env NODE_ENV=development npx sequelize-cli db:seed:all",
+    "db:seed:undo:local": "cross-env NODE_ENV=development npx sequelize-cli db:seed:undo:all",
+    "db:reset:local": "npm run db:seed:undo:local && npm run db:migrate:undo:all:local && npm run db:migrate:local && npm run db:seed:local",
+    "//": "=== RAILWAY DATABASE (Production) ===",
+    "db:create:railway": "cross-env NODE_ENV=production npx sequelize-cli db:create",
+    "db:drop:railway": "cross-env NODE_ENV=production npx sequelize-cli db:drop",
+    "db:migrate:railway": "cross-env NODE_ENV=production npx sequelize-cli db:migrate",
+    "db:migrate:undo:railway": "cross-env NODE_ENV=production npx sequelize-cli db:migrate:undo",
+    "db:migrate:undo:all:railway": "cross-env NODE_ENV=production npx sequelize-cli db:migrate:undo:all",
+    "db:migrate:status:railway": "cross-env NODE_ENV=production npx sequelize-cli db:migrate:status",
+    "db:seed:railway": "cross-env NODE_ENV=production npx sequelize-cli db:seed:all",
+    "db:seed:undo:railway": "cross-env NODE_ENV=production npx sequelize-cli db:seed:undo:all",
+    "db:reset:railway": "npm run db:seed:undo:railway && npm run db:migrate:undo:all:railway && npm run db:migrate:railway && npm run db:seed:railway",
+    "//": "=== SEQUELIZE GENERATORS ===",
+    "generate:model": "npx sequelize-cli model:generate",
+    "generate:migration": "npx sequelize-cli migration:generate",
+    "generate:seed": "npx sequelize-cli seed:generate",
+    "//": "=== UTILITY COMMANDS ===",
+    "db:config:show": "npx sequelize-cli config:show",
+    "db:status": "echo LOCAL: && npm run db:migrate:status:local && echo RAILWAY: && npm run db:migrate:status:railway",
+    "db:info": "node db-info.js",
+    "//": "=== LEGACY COMMANDS (for backward compatibility) ===",
+    "test:db": "npm run test:db:local",
+    "test:railway": "npm run test:db:railway",
+    "db:migrate": "npm run db:migrate:local",
+    "db:migrate:undo": "npm run db:migrate:undo:local",
+    "db:seed": "npm run db:seed:local",
+    "db:seed:undo": "npm run db:seed:undo:local",
+    "db:reset": "npm run db:reset:local"
   },
   "dependencies": {
     "axios": "^1.13.2",
@@ -28,6 +68,7 @@
     "winston": "^3.18.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "cross-env": "^7.0.3"
   }
-}
+} 

@@ -9,13 +9,14 @@ class AirplaneService {
     }
     async createAirplane(data) {
         try {
-            const { airline_id, model, seat_capacity } = data;
-            if (!airline_id || !model || !seat_capacity) throw new AppError('Airline ID, model and seat capacity are required', StatusCodes.BAD_REQUEST);
+            const { airline_id, registration_number, model, total_seats } = data;
+            if (!airline_id || !registration_number || !model || !total_seats) throw new AppError('Airline ID, registration number, model and total seats are required', StatusCodes.BAD_REQUEST);
 
             const airplane = await this.airplaneRepository.create({
                 airline_id,
+                registration_number,
                 model,
-                seat_capacity
+                total_seats
             });
             return airplane;
 
@@ -25,11 +26,16 @@ class AirplaneService {
         }
     }
 
-    async getAllAirplanes() {
-        return this.airplaneRepository.getAllWithDetails();
+    async getAllAirplanes(page = 1, limit = 10, filters = {}, order = [['id', 'ASC']]) {
+        try {
+            return this.airplaneRepository.getAllWithDetailsPagination(page, limit, filters, order);
+        } catch (error) {
+            console.error("Error in getAllAirplanes:", error);
+            throw new AppError('Unable to fetch airplanes', StatusCodes.INTERNAL_SERVER_ERROR);
+        }
     }
 
-    async getAirplaneByAirplaneId(airplaneId) {
+    async getAirplaneById(airplaneId) {
         const airplane = await this.airplaneRepository.getAirplaneByIdWithDetails(airplaneId);
         if (!airplane) throw new AppError('Airplane not found', StatusCodes.NOT_FOUND);
         return airplane;
@@ -38,7 +44,7 @@ class AirplaneService {
     async getAirplanesByAirlineId(airlineId) {
         try {
             if(!airlineId) throw new AppError('Airline ID is required', StatusCodes.BAD_REQUEST);
-            const airplanes = await this.airplaneRepository.findAllWithField('airline_id', airlineId);
+            const airplanes = await this.airplaneRepository.getAirplanesByAirlineIdWithDetails(airlineId);
 
             if(!airplanes || airplanes.length === 0) throw new AppError(`No airplanes found for airline ID = ${airlineId}`, StatusCodes.NOT_FOUND);
             

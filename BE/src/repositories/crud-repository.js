@@ -108,18 +108,18 @@ class CrudRepository {
             throw error;
         }
     }
-    async getAllPagination(page = 1, limit =  10, where = {} , order = [['id', 'ASC']]){
+    async getAllPagination(page = 1, limit =  10, filters = {} , order = [['id', 'ASC']]){
         try {
             const offset = (page - 1) * limit;
             const { count, rows } = await this.model.findAndCountAll({
-                where,
+                where: filters,
                 order,
                 offset,
                 limit
             });
             console.log("Pagination Result:", { count, rows, page, limit, offset });
             return {
-                data: rows,
+                items: rows,
                 pagination: {
                     currentPage: page,
                     limit: limit,

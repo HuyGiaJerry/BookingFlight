@@ -28,6 +28,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'SeatLayout',
+    tableName: 'SeatLayouts',
   });
   return SeatLayout;
 };

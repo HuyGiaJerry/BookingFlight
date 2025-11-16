@@ -9,13 +9,12 @@ class AirportService {
 
     async createAirport(airportData) {
         try {
-            const { name, logo_url, city, country, iata_code, timezone } = airportData;
+            const { name, city, country, iata_code, timezone } = airportData;
             if (!name || !iata_code) {
                 throw new AppError('Name and IATA code are required', StatusCodes.BAD_REQUEST);
             }
             return await this.airportRepository.create({
                 name,
-                logo_url,
                 iata_code,
                 city,
                 country,

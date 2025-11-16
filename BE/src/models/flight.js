@@ -53,6 +53,9 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Flight',
+    tableName: 'Flights', // lowercase cho chắc
+    underscored: false,
+    timestamps: true
   });
   return Flight;
 };

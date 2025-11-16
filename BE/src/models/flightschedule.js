@@ -51,6 +51,9 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'FlightSchedule',
+    tableName: 'FlightSchedules',
+    underscored: false,
+    timestamps: true
   });
   return FlightSchedule;
 };

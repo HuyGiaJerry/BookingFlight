@@ -15,6 +15,16 @@ module.exports = (sequelize, DataTypes) => {
       // Account has many RoleUpdates
       Account.hasMany(models.RoleUpdate, { foreignKey: 'account_id', as: 'roleUpdates' } );
 
+      // Account has many Passengers
+      Account.hasMany(models.Passenger, { foreignKey: 'account_id', as: 'passengers' } );
+
+      // Account has many BookingSessions
+      Account.hasMany(models.BookingSession, { foreignKey: 'account_id', as: 'bookingSessions' } );
+
+      // Account has many Bookings
+      Account.hasMany(models.Booking, { foreignKey: 'account_id', as: 'bookings' } );
+
+
     }
   }
   Account.init({
@@ -34,6 +44,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Account',
+    tableName: 'Accounts',
   });
   return Account;
 };

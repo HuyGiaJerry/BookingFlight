@@ -57,6 +57,8 @@
     "db:seed": "npm run db:seed:local",
     "db:seed:undo": "npm run db:seed:undo:local",
     "db:reset": "npm run db:reset:local"
+
+    
   },
   "dependencies": {
     "axios": "^1.13.2",

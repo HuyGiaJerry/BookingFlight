@@ -1,6 +1,7 @@
 const { StatusCodes } = require('http-status-codes');
 const { FlightService } = require('../services');
-const { Responses } = require('../utils/common');
+const { Responses, ParseSearchFlight } = require('../utils/common');
+
 
 const flightService = new FlightService();
 
@@ -84,7 +85,7 @@ async function deleteFlight(req, res, next) {
 async function searchFlights(req, res, next) {
     try {
         console.log('🎯 Controller - Flight search initiated');
-        console.log('📋 Search criteria received:', req.query);
+        console.log('📋 Raw query received:', req.query);
 
         // Validate that we have some search criteria
         if (!req.query || Object.keys(req.query).length === 0) {
@@ -96,27 +97,80 @@ async function searchFlights(req, res, next) {
                 ));
         }
 
-        const searchCriteria = req.query;
+        // ✅ NEW: Parse compact URL format
+        let searchCriteria;
 
-        // ✅ NEW: Log enhanced search parameters including sorting
-        console.log('🔍 Key search params:', {
+        // Check if using new compact format (has 'tt', 'ap', 'dt', 'ps')
+        if (req.query.tt || req.query.ap || req.query.dt || req.query.ps) {
+            console.log('🔄 Using COMPACT URL format');
+            searchCriteria = ParseSearchFlight.parseUrlFormatSearchFlight(req.query);
+        }
+        // Fallback to legacy format
+        else {
+            console.log('🔄 Using LEGACY URL format');
+            searchCriteria = req.query;
+        }
+
+        console.log('🔍 Parsed search criteria:', searchCriteria);
+
+        // ✅ Validate required fields
+        if (!searchCriteria.from_airport_id || !searchCriteria.to_airport_id) {
+            return res
+                .status(StatusCodes.BAD_REQUEST)
+                .json(Responses.ErrorResponse(
+                    {
+                        message: 'Missing airport information',
+                        required: 'ap parameter (format: departure_id.arrival_id)',
+                        example: 'ap=1.3 (from airport 1 to airport 3)'
+                    },
+                    'Missing required parameters'
+                ));
+        }
+
+        if (!searchCriteria.departure_date) {
+            return res
+                .status(StatusCodes.BAD_REQUEST)
+                .json(Responses.ErrorResponse(
+                    {
+                        message: 'Missing departure date',
+                        required: 'dt parameter (format: dd-mm-yyyy or dd-mm-yyyy.dd-mm-yyyy)',
+                        example: 'dt=15-11-2025 or dt=15-11-2025.20-11-2025'
+                    },
+                    'Missing required parameters'
+                ));
+        }
+
+        if (searchCriteria.trip_type === 'round-trip' && !searchCriteria.return_date) {
+            return res
+                .status(StatusCodes.BAD_REQUEST)
+                .json(Responses.ErrorResponse(
+                    {
+                        message: 'Missing return date for round-trip',
+                        required: 'dt parameter with two dates (format: dd-mm-yyyy.dd-mm-yyyy)',
+                        example: 'dt=15-11-2025.20-11-2025'
+                    },
+                    'Missing required parameters'
+                ));
+        }
+
+        // ✅ Enhanced logging for new format
+        console.log('🔍 Final search params:', {
             trip_type: searchCriteria.trip_type,
             from_airport_id: searchCriteria.from_airport_id,
             to_airport_id: searchCriteria.to_airport_id,
-            from_iata: searchCriteria.from_iata,
-            to_iata: searchCriteria.to_iata,
             departure_date: searchCriteria.departure_date,
             return_date: searchCriteria.return_date,
-            passenger_count: searchCriteria.passenger_count,
+            adult_count: searchCriteria.adult_count,         
+            child_count: searchCriteria.child_count,
             infant_count: searchCriteria.infant_count,
             preferred_class: searchCriteria.preferred_class,
-            sort_by: searchCriteria.sort_by,        // ✅ NEW
-            sort_order: searchCriteria.sort_order,  // ✅ NEW
+            sort_by: searchCriteria.sort_by,
+            sort_order: searchCriteria.sort_order,
             page: searchCriteria.page,
             limit: searchCriteria.limit
         });
 
-        // ✅ NEW: Validate sorting parameters
+        // ✅ Validate sorting parameters
         const validSortFields = ['departure_time', 'price', 'duration'];
         const validSortOrders = ['ASC', 'DESC', 'asc', 'desc'];
 
@@ -153,13 +207,7 @@ async function searchFlights(req, res, next) {
         console.log('📊 Results summary:', {
             trip_type: searchResults.trip_type,
             success: searchResults.success,
-            has_results: searchResults.results ? 'yes' : 'no',
-            // ✅ NEW: Log schedule-based results
-            total_schedules: searchResults.trip_type === 'one-way' ?
-                searchResults.results?.summary?.total_schedules :
-                (searchResults.results?.summary?.outbound_schedules || 0) +
-                (searchResults.results?.summary?.inbound_schedules || 0),
-            pagination_type: 'schedule-based' // ✅ NEW
+            has_results: searchResults.results ? 'yes' : 'no'
         });
 
         // Return formatted response

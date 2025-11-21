@@ -83,177 +83,192 @@ class FlightRepository extends CrudRepository {
 
 
     async findAvailableFlightSchedules(params) {
-    try {
-        const from_airport_id = Number(params.from_airport_id);
-        const to_airport_id = Number(params.to_airport_id);
-        const departure_date = params.departure_date;
-        const passenger_count = Number(params.passenger_count) || 1;
-        const page = Number(params.page) || 1;
-        const limit = Number(params.limit) || 10;
-        const sort_by = params.sort_by || 'departure_time';
-        const sort_order = (params.sort_order || 'ASC').toUpperCase();
+        try {
+            const from_airport_id = Number(params.from_airport_id);
+            const to_airport_id = Number(params.to_airport_id);
+            const departure_date = params.departure_date;
 
-        const offset = (page - 1) * limit;
-        const seatsNeeded = passenger_count;
+            // ✅ UPDATED: Use total passengers or calculate from adult + child (infants don't need seats)
+            const totalPassengers = Number(params.total_passengers) ||
+                (Number(params.adult_count) + Number(params.child_count || 0) + Number(params.infant_count || 0)); // ✅ Changed from passenger_count
 
-        console.log('🔍 Repository - FlightSchedule Search:', {
-            from_airport_id, to_airport_id, departure_date, seatsNeeded, page, limit
-        });
+            const page = Number(params.page) || 1;
+            const limit = Number(params.limit) || 10;
+            const sort_by = params.sort_by || 'departure_time';
+            const sort_order = (params.sort_order || 'ASC').toUpperCase();
 
-        // ✅ STEP 1: Get Flight IDs first (separate query to avoid subquery issues)
-        const validFlightIds = await Flight.findAll({
-            where: {
-                departure_airport_id: from_airport_id,
-                arrival_airport_id: to_airport_id,
-                status: 'active'
-            },
-            attributes: ['id'],
-            raw: true
-        });
+            const offset = (page - 1) * limit;
 
-        if (!validFlightIds || validFlightIds.length === 0) {
-            console.log('❌ No flights found for route');
+            // ✅ Seats needed = adults + children (infants don't need separate seats)
+            const seatsNeeded = Number(params.adult_count) + Number(params.child_count || 0); // ✅ Changed from passenger_count
+
+            console.log('🔍 Repository - FlightSchedule Search:', {
+                from_airport_id,
+                to_airport_id,
+                departure_date,
+                totalPassengers,
+                seatsNeeded,
+                passenger_breakdown: {
+                    adults: params.adult_count,                           // ✅ Changed from passenger_count
+                    children: params.child_count || 0,
+                    infants: params.infant_count || 0
+                }
+            });
+
+            // ✅ STEP 1: Get Flight IDs first (separate query to avoid subquery issues)
+            const validFlightIds = await Flight.findAll({
+                where: {
+                    departure_airport_id: from_airport_id,
+                    arrival_airport_id: to_airport_id,
+                    status: 'active'
+                },
+                attributes: ['id'],
+                raw: true
+            });
+
+            if (!validFlightIds || validFlightIds.length === 0) {
+                console.log('❌ No flights found for route');
+                return {
+                    data: [],
+                    pagination: {
+                        totalPages: 0,
+                        currentPage: page,
+                        limit,
+                        totalCount: 0
+                    }
+                };
+            }
+
+            const flightIds = validFlightIds.map(f => f.id);
+            console.log('✅ Found flight IDs:', flightIds);
+
+            // ✅ STEP 2: Get Schedules with direct flight IDs
+            const { count, rows: schedules } = await FlightSchedule.findAndCountAll({
+                where: {
+                    flight_id: { [Op.in]: flightIds },
+                    departure_time: {
+                        [Op.between]: [
+                            new Date(`${departure_date} 00:00:00`),
+                            new Date(`${departure_date} 23:59:59`)
+                        ]
+                    },
+                    status: 'scheduled'
+                },
+                attributes: ['id', 'flight_id', 'airplane_id', 'departure_time', 'arrival_time', 'status'],
+                include: [
+                    {
+                        model: Airplane,
+                        as: 'airplane',
+                        attributes: ['id', 'model', 'total_seats'],
+                        include: [
+                            {
+                                model: Airline,
+                                as: 'airline',
+                                attributes: ['id', 'name', 'logo_url', 'iata_code']
+                            }
+                        ]
+                    },
+                    {
+                        model: FlightFare,
+                        as: 'flightFares',
+                        where: {
+                            seats_available: { [Op.gte]: seatsNeeded }, // ✅ Use seatsNeeded (adults + children)
+                            status: 'available'
+                        },
+                        required: true,
+                        attributes: ['id', 'seat_class_id', 'base_price', 'tax', 'service_fee', 'seats_available', 'total_seats_allocated'],
+                        include: [
+                            {
+                                model: SeatClass,
+                                as: 'seatClass',
+                                attributes: ['id', 'class_name', 'class_code', 'description']
+                            }
+                        ]
+                    }
+                ],
+                distinct: true,
+                limit,
+                offset,
+                order: [[sort_by, sort_order]]
+            });
+
+            console.log(`📊 Found ${schedules.length} schedules with ${seatsNeeded}+ available seats`);
+
+            // ✅ STEP 3: Manually attach flight details
+            const enrichedSchedules = await Promise.all(
+                schedules.map(async (schedule) => {
+                    const flight = await Flight.findByPk(schedule.flight_id, {
+                        attributes: ['id', 'flight_number', 'duration_minutes', 'status'],
+                        include: [
+                            {
+                                model: Airport,
+                                as: 'departureAirport',
+                                attributes: ['id', 'name', 'iata_code', 'city', 'country']
+                            },
+                            {
+                                model: Airport,
+                                as: 'arrivalAirport',
+                                attributes: ['id', 'name', 'iata_code', 'city', 'country']
+                            }
+                        ]
+                    });
+
+                    return {
+                        ...schedule.toJSON(),
+                        flight: flight ? flight.toJSON() : null
+                    };
+                })
+            );
+
+            // Filter out schedules where flight lookup failed
+            const validSchedules = enrichedSchedules.filter(schedule => schedule.flight !== null);
+
+            console.log(`✅ Valid enriched schedules: ${validSchedules.length}`);
+
             return {
-                data: [],
+                data: validSchedules,
                 pagination: {
-                    totalPages: 0,
+                    totalPages: Math.ceil(count / limit),
                     currentPage: page,
                     limit,
-                    totalCount: 0
+                    totalCount: count
                 }
             };
+
+        } catch (error) {
+            console.error('❌ Repository error in findAvailableFlightSchedules:', error);
+            throw error;
         }
-
-        const flightIds = validFlightIds.map(f => f.id);
-        console.log('✅ Found flight IDs:', flightIds);
-
-        // ✅ STEP 2: Get Schedules with direct flight IDs (avoid complex joins)
-        const { count, rows: schedules } = await FlightSchedule.findAndCountAll({
-            where: {
-                flight_id: { [Op.in]: flightIds },
-                departure_time: {
-                    [Op.between]: [
-                        new Date(`${departure_date} 00:00:00`),
-                        new Date(`${departure_date} 23:59:59`)
-                    ]
-                },
-                status: 'scheduled'
-            },
-            attributes: ['id', 'flight_id', 'airplane_id', 'departure_time', 'arrival_time', 'status'],
-            include: [
-                {
-                    model: Airplane,
-                    as: 'airplane',
-                    attributes: ['id', 'model', 'total_seats'],
-                    include: [
-                        { 
-                            model: Airline, 
-                            as: 'airline', 
-                            attributes: ['id', 'name', 'logo_url', 'iata_code'] 
-                        }
-                    ]
-                },
-                {
-                    model: FlightFare,
-                    as: 'flightFares',
-                    where: {
-                        seats_available: { [Op.gte]: seatsNeeded },
-                        status: 'available'
-                    },
-                    required: true,
-                    attributes: ['id', 'seat_class_id', 'base_price', 'tax', 'service_fee', 'seats_available', 'total_seats_allocated'],
-                    include: [
-                        { 
-                            model: SeatClass, 
-                            as: 'seatClass', 
-                            attributes: ['id', 'class_name', 'class_code', 'description'] 
-                        }
-                    ]
-                }
-            ],
-            distinct: true,
-            limit,
-            offset,
-            order: [[sort_by, sort_order]]
-        });
-
-        console.log(`📊 Found ${schedules.length} schedules with available fares`);
-
-        // ✅ STEP 3: Manually attach flight details (avoid complex joins)
-        const enrichedSchedules = await Promise.all(
-            schedules.map(async (schedule) => {
-                const flight = await Flight.findByPk(schedule.flight_id, {
-                    attributes: ['id', 'flight_number', 'duration_minutes', 'status'],
-                    include: [
-                        { 
-                            model: Airport, 
-                            as: 'departureAirport', 
-                            attributes: ['id', 'name', 'iata_code', 'city', 'country'] 
-                        },
-                        { 
-                            model: Airport, 
-                            as: 'arrivalAirport', 
-                            attributes: ['id', 'name', 'iata_code', 'city', 'country'] 
-                        }
-                    ]
-                });
-
-                return {
-                    ...schedule.toJSON(),
-                    flight: flight ? flight.toJSON() : null
-                };
-            })
-        );
-
-        // Filter out schedules where flight lookup failed
-        const validSchedules = enrichedSchedules.filter(schedule => schedule.flight !== null);
-
-        console.log(`✅ Valid enriched schedules: ${validSchedules.length}`);
-
-        return {
-            data: validSchedules,
-            pagination: {
-                totalPages: Math.ceil(count / limit),
-                currentPage: page,
-                limit,
-                totalCount: count
-            }
-        };
-
-    } catch (error) {
-        console.error('❌ Repository error in findAvailableFlightSchedules:', error);
-        throw error;
     }
-}
 
     async findRoundTripFlightSchedules(params) {
-    try {
-        console.log('🔄 Repository - Round trip schedule search:', params);
+        try {
+            console.log('🔄 Repository - Round trip schedule search:', params);
 
-        const [outbound, inbound] = await Promise.all([
-            // Outbound: A → B
-            this.findAvailableFlightSchedules({
-                ...params,
-                departure_date: params.departure_date
-            }),
-            // Inbound: B → A  
-            this.findAvailableFlightSchedules({
-                ...params,
-                departure_date: params.return_date,
-                from_airport_id: params.to_airport_id,
-                to_airport_id: params.from_airport_id
-            })
-        ]);
+            const [outbound, inbound] = await Promise.all([
+                // Outbound: A → B
+                this.findAvailableFlightSchedules({
+                    ...params,
+                    departure_date: params.departure_date
+                }),
+                // Inbound: B → A  
+                this.findAvailableFlightSchedules({
+                    ...params,
+                    departure_date: params.return_date,
+                    from_airport_id: params.to_airport_id,
+                    to_airport_id: params.from_airport_id
+                })
+            ]);
 
-        console.log(`📊 Round trip results: ${outbound.data.length} outbound + ${inbound.data.length} inbound`);
+            console.log(`📊 Round trip results: ${outbound.data.length} outbound + ${inbound.data.length} inbound`);
 
-        return { outbound, inbound };
+            return { outbound, inbound };
 
-    } catch (error) {
-        console.error('❌ Repository error in findRoundTripFlightSchedules:', error);
-        throw error;
+        } catch (error) {
+            console.error('❌ Repository error in findRoundTripFlightSchedules:', error);
+            throw error;
+        }
     }
-}
 
 
 

@@ -60,70 +60,127 @@ class FlightService {
 
 
     async searchFlights(searchCriteria) {
-    try {
-        const passenger_count = Number(searchCriteria.passenger_count) || 1;
-        const infant_count = Number(searchCriteria.infant_count) || 0;
-        const page = Number(searchCriteria.page) || 1;
-        const limit = Number(searchCriteria.limit) || 10;
-        const sort_by = searchCriteria.sort_by || 'departure_time';
-        const sort_order = (searchCriteria.sort_order || 'ASC').toUpperCase();
+        try {
+            // ✅ UPDATED: Use adult_count instead of passenger_count
+            const adult_count = Number(searchCriteria.adult_count) || 1;      // ✅ Changed from passenger_count
+            const child_count = Number(searchCriteria.child_count) || 0;
+            const infant_count = Number(searchCriteria.infant_count) || 0;
+            const page = Number(searchCriteria.page) || 1;
+            const limit = Number(searchCriteria.limit) || 10;
+            const sort_by = searchCriteria.sort_by || 'departure_time';
+            const sort_order = (searchCriteria.sort_order || 'ASC').toUpperCase();
 
-        if (!searchCriteria.from_airport_id || !searchCriteria.to_airport_id) {
-            throw new AppError('Missing airport IDs', StatusCodes.BAD_REQUEST);
-        }
+            // ✅ PASSENGER VALIDATION  
+            const total_passengers = adult_count + child_count + infant_count;
 
-        const searchParams = {
-            from_airport_id: Number(searchCriteria.from_airport_id),
-            to_airport_id: Number(searchCriteria.to_airport_id),
-            departure_date: searchCriteria.departure_date,
-            return_date: searchCriteria.return_date,
-            passenger_count,
-            infant_count,
-            page,
-            limit,
-            sort_by,
-            sort_order
-        };
-
-        if (searchCriteria.trip_type === 'one-way') {
-            const result = await this.flightRepository.findAvailableFlightSchedules(searchParams);
-            if (!result.data || result.data.length === 0)
-                throw new AppError('No flights found', StatusCodes.NOT_FOUND);
-            return this.formatOneWayResult(result, passenger_count);
-        } else if (searchCriteria.trip_type === 'round-trip') {
-            if (!searchCriteria.return_date)
-                throw new AppError('Missing return_date', StatusCodes.BAD_REQUEST);
-
-            const result = await this.flightRepository.findRoundTripFlightSchedules(searchParams);
-
-            if ((!result.outbound.data || result.outbound.data.length === 0) ||
-                (!result.inbound.data || result.inbound.data.length === 0)) {
-                throw new AppError('No round-trip flights found', StatusCodes.NOT_FOUND);
+            if (total_passengers > 7) {
+                throw new AppError('Cannot book more than 7 passengers at a time', StatusCodes.BAD_REQUEST);
+            }
+            if (adult_count < 1) {                                         // ✅ Changed from passenger_count
+                throw new AppError('At least one adult passenger is required', StatusCodes.BAD_REQUEST);
+            }
+            if (infant_count > adult_count) {                              // ✅ Changed from passenger_count
+                throw new AppError('Number of infants cannot exceed number of adult passengers', StatusCodes.BAD_REQUEST);
             }
 
-            return this.formatRoundTripResult(result, passenger_count);
-        } else {
-            throw new AppError('Invalid trip_type', StatusCodes.BAD_REQUEST);
+            console.log('👥 Passenger validation passed:', {
+                adults: adult_count,                                       // ✅ Changed from passenger_count
+                children: child_count,
+                infants: infant_count,
+                total: total_passengers
+            });
+
+            if (!searchCriteria.from_airport_id || !searchCriteria.to_airport_id) {
+                throw new AppError('Missing airport IDs', StatusCodes.BAD_REQUEST);
+            }
+
+            // ✅ Validate dates
+            if (!searchCriteria.departure_date || searchCriteria.departure_date === null) {
+                throw new AppError('Invalid departure date format', StatusCodes.BAD_REQUEST);
+            }
+
+            if (searchCriteria.trip_type === 'round-trip' &&
+                (!searchCriteria.return_date || searchCriteria.return_date === null)) {
+                throw new AppError('Invalid return date format for round-trip', StatusCodes.BAD_REQUEST);
+            }
+
+            const searchParams = {
+                from_airport_id: Number(searchCriteria.from_airport_id),
+                to_airport_id: Number(searchCriteria.to_airport_id),
+                departure_date: searchCriteria.departure_date,
+                return_date: searchCriteria.return_date,
+                adult_count,                                               // ✅ Changed from passenger_count
+                child_count,
+                infant_count,
+                total_passengers,
+                page,
+                limit,
+                sort_by,
+                sort_order
+            };
+
+            console.log('🔍 Final search params:', searchParams);
+
+            if (searchCriteria.trip_type === 'one-way') {
+                const result = await this.flightRepository.findAvailableFlightSchedules(searchParams);
+                if (!result.data || result.data.length === 0)
+                    throw new AppError('No flights found', StatusCodes.NOT_FOUND);
+                return this.formatOneWayResult(result, total_passengers, { adult_count, child_count, infant_count }); // ✅ Updated
+            } else if (searchCriteria.trip_type === 'round-trip') {
+                const result = await this.flightRepository.findRoundTripFlightSchedules(searchParams);
+
+                if ((!result.outbound.data || result.outbound.data.length === 0) ||
+                    (!result.inbound.data || result.inbound.data.length === 0)) {
+                    throw new AppError('No round-trip flights found', StatusCodes.NOT_FOUND);
+                }
+
+                return this.formatRoundTripResult(result, total_passengers, { adult_count, child_count, infant_count }); // ✅ Updated
+            } else {
+                throw new AppError('Invalid trip_type', StatusCodes.BAD_REQUEST);
+            }
+        } catch (error) {
+            console.error('❌ Service error in searchFlights:', error);
+            if (error instanceof AppError) throw error;
+            throw new AppError('Unable to search flights', StatusCodes.INTERNAL_SERVER_ERROR);
         }
-    } catch (error) {
-        console.error('❌ Service error in searchFlights:', error);
-        if (error instanceof AppError) throw error;
-        throw new AppError('Unable to search flights', StatusCodes.INTERNAL_SERVER_ERROR);
     }
-}
 
     /**
-     * 🔹 FORMAT ONE-WAY RESULT
+     * 🔹 FORMAT ONE-WAY RESULT with passenger breakdown
      */
-    formatOneWayResult(result, passengerCount) {
+    formatOneWayResult(result, totalPassengers, passengerBreakdown) {
         const flights = result.data.map(schedule => {
             const flight = schedule.flight;
-            const fares = schedule.flightFares.map(fare => ({
-                id: fare.id,
-                class: fare.seatClass.class_code,
-                price_total: (Number(fare.base_price) + Number(fare.tax || 0) + Number(fare.service_fee || 0)) * passengerCount,
-                seats_available: fare.seats_available
-            }));
+            const fares = schedule.flightFares.map(fare => {
+
+                // ✅ Calculate price with passenger type breakdown
+                const adultPrice = Number(fare.base_price) + Number(fare.tax || 0) + Number(fare.service_fee || 0);
+                const childPrice = adultPrice * 0.75;  // 25% discount for children
+                const infantPrice = adultPrice * 0.1;  // 90% discount for infants (tax only)
+
+                const totalPrice =
+                    (adultPrice * passengerBreakdown.adult_count) +       // ✅ Changed from passenger_count
+                    (childPrice * passengerBreakdown.child_count) +
+                    (infantPrice * passengerBreakdown.infant_count);
+
+                return {
+                    id: fare.id,
+                    class: fare.seatClass.class_code,
+                    price_breakdown: {
+                        adult_price: adultPrice,
+                        child_price: childPrice,
+                        infant_price: infantPrice,
+                        total_price: totalPrice
+                    },
+                    passengers: {
+                        adults: passengerBreakdown.adult_count,           // ✅ Changed from passenger_count
+                        children: passengerBreakdown.child_count,
+                        infants: passengerBreakdown.infant_count,
+                        total: totalPassengers
+                    },
+                    seats_available: fare.seats_available
+                };
+            });
 
             return {
                 schedule_id: schedule.id,
@@ -141,16 +198,27 @@ class FlightService {
             };
         });
 
-        return { flights, pagination: result.pagination };
+        return {
+            flights,
+            pagination: result.pagination,
+            search_criteria: {
+                passengers: {
+                    adults: passengerBreakdown.adult_count,               // ✅ Changed from passenger_count
+                    children: passengerBreakdown.child_count,
+                    infants: passengerBreakdown.infant_count,
+                    total: totalPassengers
+                }
+            }
+        };
     }
 
     /**
      * 🔹 FORMAT ROUND-TRIP RESULT
      */
-    formatRoundTripResult(result, passengerCount) {
+    formatRoundTripResult(result, totalPassengers, passengerBreakdown) {
         return {
-            outbound: this.formatOneWayResult(result.outbound, passengerCount),
-            inbound: this.formatOneWayResult(result.inbound, passengerCount)
+            outbound: this.formatOneWayResult(result.outbound, totalPassengers, passengerBreakdown),
+            inbound: this.formatOneWayResult(result.inbound, totalPassengers, passengerBreakdown)
         };
     }
 

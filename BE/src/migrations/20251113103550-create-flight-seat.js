@@ -32,15 +32,15 @@ module.exports = {
         allowNull: false,
         defaultValue: 0.00
       },
-      blocked_by_session_id: {
+      blocked_session_id: {          // ✅ SỬA: blocked_session_id
         type: Sequelize.STRING,
         allowNull: true
       },
-      booked_at: {
+      blocked_at: {                  // ✅ SỬA: blocked_at
         type: Sequelize.DATE,
         allowNull: true
       },
-      booked_until: {
+      blocked_until: {               // ✅ SỬA: blocked_until
         type: Sequelize.DATE,
         allowNull: true
       },

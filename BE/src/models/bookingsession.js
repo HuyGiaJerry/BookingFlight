@@ -15,7 +15,20 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   BookingSession.init({
-    account_id: DataTypes.INTEGER,
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false
+    },
+    account_id:{
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Accounts',
+        key: 'id'
+      }
+    },
     session_data: DataTypes.JSON,
     total_estimate: DataTypes.DECIMAL(10, 2),
     expire_at: DataTypes.DATE

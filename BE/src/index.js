@@ -1,6 +1,6 @@
 const express = require('express');
-const { StatusCodes } = require('http-status-codes');
 const { ServerConfig, Logger } = require('./config');
+const {SeatCleanupService} = require('./services')
 const apiRouter = require('./routes');
 const { ErrorHandler } = require('./middlewares');
 var cookieParser = require('cookie-parser');
@@ -26,8 +26,42 @@ app.listen(ServerConfig.PORT, async () => {
     try {
         await sequelize.authenticate();
         console.log('✅ Database connection established successfully!');
+        // ✅ THÊM: Start auto-cleanup service AFTER database connection
+        console.log('🧹 Starting seat cleanup service...');
+        const seatCleanupService = new SeatCleanupService();
+        seatCleanupService.startAutoCleanup();
+        
+        // Store globally để có thể stop khi shutdown
+        global.seatCleanupService = seatCleanupService;
     } catch (error) {
         console.error('❌ Unable to connect to database:', error.message);
+        process.exit(1); // thoát ứng dụng nếu không kết nối được DB
     }
     // Logger.info("Successfully started the server", "root", {});
+});
+
+// ✅ THÊM: Graceful shutdown handlers
+process.on('SIGTERM', () => {
+    console.log('📋 SIGTERM received, shutting down gracefully...');
+    if (global.seatCleanupService) {
+        global.seatCleanupService.stopAutoCleanup();
+    }
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    console.log('📋 SIGINT received (Ctrl+C), shutting down gracefully...');
+    if (global.seatCleanupService) {
+        global.seatCleanupService.stopAutoCleanup();
+    }
+    process.exit(0);
+});
+
+// ✅ THÊM: Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    if (global.seatCleanupService) {
+        global.seatCleanupService.stopAutoCleanup();
+    }
+    process.exit(1);
 });

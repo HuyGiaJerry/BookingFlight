@@ -4,4 +4,10 @@ module.exports = {
     AirlineRepository: require('./airline-repository'),
     AirplaneRepository: require('./airplane-repository'),
     FlightRepository: require('./flight-repository'),
+    
+    BookingRepository: require('./booking-repository'),
+    PassengerRepository: require('./passenger-repository'),
+    SeatRepository: require('./seat-repository'),
+    ServicesRepository: require('./services-repository'),
+    TicketRepository: require('./ticket-repository'),
 }

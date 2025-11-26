@@ -2,7 +2,13 @@ const { StatusCodes } = require('http-status-codes');
 const { FlightRepository } = require('../repositories');
 const AppError = require('../utils/errors/app-error');
 const moment = require('moment');
-
+const { 
+    FlightSchedule, 
+    Flight, 
+    Airport, 
+    Airline, 
+    Airplane 
+} = require('../models');
 class FlightService {
     constructor() {
         this.flightRepository = new FlightRepository();
@@ -221,6 +227,86 @@ class FlightService {
             inbound: this.formatOneWayResult(result.inbound, totalPassengers, passengerBreakdown)
         };
     }
+
+    /**
+     * Get flight details for booking summary sidebar
+     */
+    async getFlightScheduleDetails(scheduleIds) {
+        try {
+            const flights = await FlightSchedule.findAll({
+                where: { id: scheduleIds },
+                include: [
+                    {
+                        model: Flight,
+                        as: 'flight',
+                        include: [
+                            {
+                                model: Airport,
+                                as: 'departureAirport',
+                                attributes: ['name', 'iata_code', 'city']
+                            },
+                            {
+                                model: Airport,
+                                as: 'arrivalAirport', 
+                                attributes: ['name', 'iata_code', 'city']
+                            },
+                            {
+                                model: Airline,
+                                as: 'airline',
+                                attributes: ['name', 'iata_code', 'logo_url']
+                            }
+                        ]
+                    },
+                    {
+                        model: Airplane,
+                        as: 'airplane',
+                        attributes: ['model', 'registration_number']
+                    }
+                ]
+            });
+
+            return flights.map(schedule => ({
+                schedule_id: schedule.id,
+                flight_number: schedule.flight.flight_number,
+                airline: {
+                    name: schedule.flight.airline.name,
+                    code: schedule.flight.airline.iata_code,
+                    logo: schedule.flight.airline.logo_url
+                },
+                departure: {
+                    airport: schedule.flight.departureAirport.name,
+                    city: schedule.flight.departureAirport.city,
+                    iata: schedule.flight.departureAirport.iata_code,
+                    time: schedule.departure_time
+                },
+                arrival: {
+                    airport: schedule.flight.arrivalAirport.name,
+                    city: schedule.flight.arrivalAirport.city,
+                    iata: schedule.flight.arrivalAirport.iata_code,
+                    time: schedule.arrival_time
+                },
+                duration_minutes: schedule.flight.duration_minutes,
+                airplane: schedule.airplane.model,
+                status: schedule.status
+            }));
+        } catch (error) {
+            console.error('Error getting flight schedule details:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get fare information for flights
+     */
+    async getFlightFares(scheduleIds, seatClassIds = null) {
+        // TODO: Implement fare retrieval from FlightFare table
+        // This will be used to show pricing in sidebar
+        return scheduleIds.map(id => ({
+            schedule_id: id,
+            base_fare: 1000000,
+            currency: 'VND'
+        }));
+    } 
 
 }
 

@@ -32,18 +32,19 @@ module.exports = {
         const random = Math.random();
         let status = 'available';
         let priceAdjustment = 0;
-        let blockedBySessionId = null;
-        let bookedAt = null;
-        let bookedUntil = null;
+        let blockedSessionId = null;         // ✅ SỬA: blockedSessionId
+        let blockedAt = null;                // ✅ SỬA: blockedAt
+        let blockedUntil = null;             // ✅ SỬA: blockedUntil
 
         // Status distribution
         if (random < 0.30) {
           status = 'booked';
-          bookedAt = new Date(Date.now() - Math.random() * 14 * 24 * 60 * 60 * 1000);
+          // ❌ Không set blocked_at cho booked seats
         } else if (random < 0.33) {
           status = 'blocked';
-          blockedBySessionId = 'session_' + Math.random().toString(36).substring(2, 15);
-          bookedUntil = new Date(Date.now() + (5 + Math.random() * 10) * 60 * 1000);
+          blockedSessionId = 'session_' + Math.random().toString(36).substring(2, 15);
+          blockedAt = new Date();            // ✅ SỬA: blocked_at
+          blockedUntil = new Date(Date.now() + (5 + Math.random() * 10) * 60 * 1000); // ✅ SỬA: blocked_until
         } else if (random < 0.36) {
           status = 'maintenance';
         }
@@ -69,9 +70,9 @@ module.exports = {
           flight_schedule_id: schedule.schedule_id,
           seat_layout_id: seatLayout.layout_id,
           price_adjustment: priceAdjustment,
-          blocked_by_session_id: blockedBySessionId,
-          booked_at: bookedAt,
-          booked_until: bookedUntil,
+          blocked_session_id: blockedSessionId,  // ✅ SỬA: blocked_session_id
+          blocked_at: blockedAt,                 // ✅ SỬA: blocked_at
+          blocked_until: blockedUntil,           // ✅ SỬA: blocked_until
           status: status,
           createdAt: new Date(),
           updatedAt: new Date()

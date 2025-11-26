@@ -18,10 +18,17 @@ module.exports = (sequelize, DataTypes) => {
   }
   Role.init({
     title: DataTypes.STRING,
+    description: DataTypes.STRING,
+    status: DataTypes.STRING,
+    created_by: DataTypes.INTEGER,
+    deleted_by: DataTypes.INTEGER,
+    deleted_at: DataTypes.DATE,
+    deleted: DataTypes.BOOLEAN,
 
   }, {
     sequelize,
     modelName: 'Role',
+    tableName: 'Roles',
   });
   return Role;
 };

@@ -1,29 +1,20 @@
-// const express = require('express');
-// const { BookingController } = require('../../controllers');
-// const router = express.Router();
+const express = require('express');
+const BookingController = require('../../controllers/booking-controller');
 
-// // Initialize a new booking draft
-// router.post('/initialize', BookingController.initializeBooking);
+const router = express.Router();
+const bookingController = new BookingController();
 
-// // Phase 2: Get booking details and add passengers
-// router.get('/:bookingId/details', BookingController.getBookingDetails);
-// router.post('/:bookingId/passengers', BookingController.addPassengers);
+// Lấy dữ liệu saved passenger của user nếu đăng nhập , rules 
+router.get('/basic-data', bookingController.getBookingBasicData);
 
-// // Phase 3: Seat selection
-// router.get('/flights/:flightScheduleId/seats', BookingController.getSeatLayout);
-// router.post('/:bookingId/seats', BookingController.selectSeats);
+// ✅ Existing routes
+router.post('/validate-form', bookingController.validateBookingForm);
+router.post('/calculate-preview', bookingController.calculateBookingPreview);
+router.post('/create-complete', bookingController.createCompleteBooking);
+router.get('/:bookingId', bookingController.getBookingDetails);
 
-// // Phase 4: Extra services
-// router.post('/:bookingId/services', BookingController.addExtraServices);
+// ✅ THÊM: Mock auto-assign + create booking APIs
+router.post('/auto-assign-seats', bookingController.autoAssignPendingSeats);
+router.post('/create-from-session', bookingController.createBookingFromSession);
 
-// // Phase 5: Review and confirmation
-// router.get('/:bookingId/summary', BookingController.getBookingSummary);
-// router.post('/:bookingId/confirm', BookingController.confirmBooking);
-
-// // Phase 6: Ticket creation
-// router.post('/:bookingId/tickets', BookingController.createTickets);
-
-// // Phase 7: Cancel booking
-// router.delete('/:bookingId/cancel', BookingController.cancelBooking);
-
-// module.exports = router;
+module.exports = router;

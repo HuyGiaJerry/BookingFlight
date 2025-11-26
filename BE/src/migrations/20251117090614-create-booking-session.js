@@ -5,24 +5,29 @@ module.exports = {
     await queryInterface.createTable('BookingSessions', {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4
       },
       account_id: {
         type: Sequelize.INTEGER,
+        allowNull: true,
         references: { model: 'Accounts', key: 'id' },
         onUpdate: 'CASCADE',
         onDelete: 'SET NULL'
       },
       session_data: {
-        type: Sequelize.JSON
+        type: Sequelize.JSON,
+        allowNull: true,
+        defaultValue: {}
       },
       total_estimate: {
-        type: Sequelize.DECIMAL(10, 2)
+        type: Sequelize.DECIMAL(10, 2),
+        defaultValue: 0.00
       },
       expire_at: {
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
+        allowNull: false
       },
       createdAt: {
         allowNull: false,

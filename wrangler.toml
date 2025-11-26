@@ -1,4 +1,0 @@
-name = "booking-flight-api"
-main = "BE/src/index.js"
-compatibility_date = "2025-11-26"
-compatibility_flags = ["nodejs_compat"]

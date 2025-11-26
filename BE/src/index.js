@@ -12,7 +12,11 @@ app.use(cookieParser());
 
 app.use('/api', apiRouter);
 
-
+const cors = require('cors');
+app.use(cors({
+    origin: '*',
+    credentials: true
+}));
 
 // middleware xử lý lỗi
 app.use(ErrorHandler);

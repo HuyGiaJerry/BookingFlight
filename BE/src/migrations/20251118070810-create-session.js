@@ -23,7 +23,7 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'Accounts',  
+          model: 'Accounts',
           key: 'id'
         },
         onDelete: 'CASCADE',
@@ -54,7 +54,7 @@ module.exports = {
     });
   },
 
-  async down (queryInterface, Sequelize) {
+  async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('Sessions');
   }
 };

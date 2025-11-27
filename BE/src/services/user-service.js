@@ -125,7 +125,7 @@ class UserService {
             return await this.userRepository.update(id, data);
         } catch (error) {
             if (error instanceof AppError) throw error;
-            throw new AppError('Internal Server Error', StatusCodes.INTERNAL_SERVER_ERROR);
+            throw new AppError('Internal Server Error', StatusCodfes.INTERNAL_SERVER_ERROR);
         }
     }
 

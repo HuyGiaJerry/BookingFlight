@@ -2,12 +2,12 @@ const { StatusCodes } = require('http-status-codes');
 const { FlightRepository } = require('../repositories');
 const AppError = require('../utils/errors/app-error');
 const moment = require('moment');
-const { 
-    FlightSchedule, 
-    Flight, 
-    Airport, 
-    Airline, 
-    Airplane 
+const {
+    FlightSchedule,
+    Flight,
+    Airport,
+    Airline,
+    Airplane
 } = require('../models');
 class FlightService {
     constructor() {
@@ -67,25 +67,15 @@ class FlightService {
 
     async searchFlights(searchCriteria) {
         try {
-<<<<<<< HEAD
-            const passenger_count = Number(searchCriteria.passenger_count) || 1;
-=======
             // ✅ UPDATED: Use adult_count instead of passenger_count
             const adult_count = Number(searchCriteria.adult_count) || 1;      // ✅ Changed from passenger_count
             const child_count = Number(searchCriteria.child_count) || 0;
->>>>>>> aac3e3aa5b51aa7a0858834e9213a0f82d645342
             const infant_count = Number(searchCriteria.infant_count) || 0;
             const page = Number(searchCriteria.page) || 1;
             const limit = Number(searchCriteria.limit) || 10;
             const sort_by = searchCriteria.sort_by || 'departure_time';
             const sort_order = (searchCriteria.sort_order || 'ASC').toUpperCase();
 
-<<<<<<< HEAD
-            if (!searchCriteria.from_airport_id || !searchCriteria.to_airport_id) {
-                throw new AppError('Missing airport IDs', StatusCodes.BAD_REQUEST);
-            }
-
-=======
             // ✅ PASSENGER VALIDATION  
             const total_passengers = adult_count + child_count + infant_count;
 
@@ -120,34 +110,11 @@ class FlightService {
                 throw new AppError('Invalid return date format for round-trip', StatusCodes.BAD_REQUEST);
             }
 
->>>>>>> aac3e3aa5b51aa7a0858834e9213a0f82d645342
             const searchParams = {
                 from_airport_id: Number(searchCriteria.from_airport_id),
                 to_airport_id: Number(searchCriteria.to_airport_id),
                 departure_date: searchCriteria.departure_date,
                 return_date: searchCriteria.return_date,
-<<<<<<< HEAD
-                passenger_count,
-                infant_count,
-                page,
-                limit,
-                sort_by,
-                sort_order,
-                // New Filters
-                airline_ids: searchCriteria.airline_ids,
-                min_departure_time: searchCriteria.min_departure_time,
-                max_departure_time: searchCriteria.max_departure_time,
-                min_arrival_time: searchCriteria.min_arrival_time,
-                max_arrival_time: searchCriteria.max_arrival_time,
-                return_filters: searchCriteria.return_filters,
-                seat_class: searchCriteria.preferred_class, // ✅ Pass seat class filter
-                // ✅ NEW: Price Range & Time Slot Filters
-                min_price: searchCriteria.min_price ? Number(searchCriteria.min_price) : undefined,
-                max_price: searchCriteria.max_price ? Number(searchCriteria.max_price) : undefined,
-                time_slot: searchCriteria.time_slot // e.g., 'morning', 'afternoon'
-            };
-
-=======
                 adult_count,                                               // ✅ Changed from passenger_count
                 child_count,
                 infant_count,
@@ -160,21 +127,12 @@ class FlightService {
 
             console.log('🔍 Final search params:', searchParams);
 
->>>>>>> aac3e3aa5b51aa7a0858834e9213a0f82d645342
             if (searchCriteria.trip_type === 'one-way') {
                 const result = await this.flightRepository.findAvailableFlightSchedules(searchParams);
                 if (!result.data || result.data.length === 0)
                     throw new AppError('No flights found', StatusCodes.NOT_FOUND);
-<<<<<<< HEAD
-                return this.formatOneWayResult(result, passenger_count);
-            } else if (searchCriteria.trip_type === 'round-trip') {
-                if (!searchCriteria.return_date)
-                    throw new AppError('Missing return_date', StatusCodes.BAD_REQUEST);
-
-=======
                 return this.formatOneWayResult(result, total_passengers, { adult_count, child_count, infant_count }); // ✅ Updated
             } else if (searchCriteria.trip_type === 'round-trip') {
->>>>>>> aac3e3aa5b51aa7a0858834e9213a0f82d645342
                 const result = await this.flightRepository.findRoundTripFlightSchedules(searchParams);
 
                 if ((!result.outbound.data || result.outbound.data.length === 0) ||
@@ -182,11 +140,7 @@ class FlightService {
                     throw new AppError('No round-trip flights found', StatusCodes.NOT_FOUND);
                 }
 
-<<<<<<< HEAD
-                return this.formatRoundTripResult(result, passenger_count);
-=======
                 return this.formatRoundTripResult(result, total_passengers, { adult_count, child_count, infant_count }); // ✅ Updated
->>>>>>> aac3e3aa5b51aa7a0858834e9213a0f82d645342
             } else {
                 throw new AppError('Invalid trip_type', StatusCodes.BAD_REQUEST);
             }
@@ -253,9 +207,6 @@ class FlightService {
         return {
             flights,
             pagination: result.pagination,
-<<<<<<< HEAD
-            filter_options: result.filter_options // Pass through filter options if present
-=======
             search_criteria: {
                 passengers: {
                     adults: passengerBreakdown.adult_count,               // ✅ Changed from passenger_count
@@ -264,7 +215,6 @@ class FlightService {
                     total: totalPassengers
                 }
             }
->>>>>>> aac3e3aa5b51aa7a0858834e9213a0f82d645342
         };
     }
 
@@ -273,17 +223,8 @@ class FlightService {
      */
     formatRoundTripResult(result, totalPassengers, passengerBreakdown) {
         return {
-<<<<<<< HEAD
-            outbound: this.formatOneWayResult(result.outbound, passengerCount),
-            inbound: this.formatOneWayResult(result.inbound, passengerCount),
-            filter_options: {
-                outbound: result.outbound.filter_options,
-                inbound: result.inbound.filter_options
-            }
-=======
             outbound: this.formatOneWayResult(result.outbound, totalPassengers, passengerBreakdown),
             inbound: this.formatOneWayResult(result.inbound, totalPassengers, passengerBreakdown)
->>>>>>> aac3e3aa5b51aa7a0858834e9213a0f82d645342
         };
     }
 
@@ -306,7 +247,7 @@ class FlightService {
                             },
                             {
                                 model: Airport,
-                                as: 'arrivalAirport', 
+                                as: 'arrivalAirport',
                                 attributes: ['name', 'iata_code', 'city']
                             },
                             {
@@ -365,7 +306,7 @@ class FlightService {
             base_fare: 1000000,
             currency: 'VND'
         }));
-    } 
+    }
 
 }
 

@@ -13,6 +13,17 @@ const roleRouter = require('./role-rotes')
 // const oauthRouter = require('./oauth-routes');
 // const bookingRouter = require('./booking-routes');
 const { ProtectedRoutes } = require('../../middlewares');
+
+const bookingRoutes = require('./booking-routes');
+const seatRoutes = require('./seat-routes');
+const serviceOfferRoutes = require('./service-offer-routes');
+const passengerRoutes = require('./passenger-routes');
+const flightSummaryRoutes = require('./flight-summary-routes');
+const seatSelectionRoutes = require('./seat-selection-routes');
+const servicesSelectionRoutes = require('./services-selection-routes');
+const flightSelectionRoutes = require('./flight-selection-routes');
+// const oauthRouter = require('./oauth-routes');
+// const {ProtectedRoutes} = require('../../middlewares');
 const router = express.Router();
 
 

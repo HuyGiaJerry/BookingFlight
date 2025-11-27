@@ -45,6 +45,12 @@ class AirportService {
         return airport;
     }
 
+    async getAirportByIata(iataCode) {
+        const airport = await this.airportRepository.findOne('iata_code', iataCode);
+        if (!airport) throw new AppError(`Airport with IATA code ${iataCode} not found`, StatusCodes.NOT_FOUND);
+        return airport;
+    }
+
     async searchAirports(query, page = 1, limit = 10) {
         try {
             if (!query) throw new AppError('Search query is required', StatusCodes.BAD_REQUEST);

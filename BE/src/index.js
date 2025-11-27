@@ -3,6 +3,7 @@ const { StatusCodes } = require('http-status-codes');
 const { ServerConfig, Logger } = require('./config');
 const apiRouter = require('./routes');
 const { ErrorHandler } = require('./middlewares');
+const { ProtectedRoutes } = require('./middlewares')
 var cookieParser = require('cookie-parser');
 const app = express();
 const { sequelize } = require('./models');
@@ -12,7 +13,7 @@ app.use(cookieParser());
 
 app.use('/api', apiRouter);
 
-
+// app.use('./api', ProtectedRoutes, apiRouter)
 
 // middleware xử lý lỗi
 app.use(ErrorHandler);

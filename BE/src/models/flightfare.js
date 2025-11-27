@@ -4,7 +4,7 @@ const {
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class FlightFare extends Model {
-    
+
     static associate(models) {
       // 1 FlightFare belongs to 1 FlightSchedule
       FlightFare.belongsTo(models.FlightSchedule, { foreignKey: 'flight_schedule_id', as: 'flightSchedule' });

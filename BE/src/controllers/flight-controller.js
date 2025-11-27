@@ -1,8 +1,12 @@
 const { StatusCodes } = require('http-status-codes');
-const { FlightService } = require('../services');
+const { FlightService, AirportService } = require('../services');
 const { Responses } = require('../utils/common');
+const redisClient = require('../config/redis');
+const FlightSearchService = require('../services/flightSearchService');
+const { applyFiltersAndSorting } = require('../utils/searchProcessor');
 
 const flightService = new FlightService();
+const airportService = new AirportService();
 
 async function createFlight(req, res, next) {
     try {
@@ -95,56 +99,7 @@ async function searchFlights(req, res, next) {
                     'Search criteria required'
                 ));
         }
-
         const searchCriteria = req.query;
-
-        // ✅ NEW: Log enhanced search parameters including sorting
-        console.log('🔍 Key search params:', {
-            trip_type: searchCriteria.trip_type,
-            from_airport_id: searchCriteria.from_airport_id,
-            to_airport_id: searchCriteria.to_airport_id,
-            from_iata: searchCriteria.from_iata,
-            to_iata: searchCriteria.to_iata,
-            departure_date: searchCriteria.departure_date,
-            return_date: searchCriteria.return_date,
-            passenger_count: searchCriteria.passenger_count,
-            infant_count: searchCriteria.infant_count,
-            preferred_class: searchCriteria.preferred_class,
-            sort_by: searchCriteria.sort_by,        // ✅ NEW
-            sort_order: searchCriteria.sort_order,  // ✅ NEW
-            page: searchCriteria.page,
-            limit: searchCriteria.limit
-        });
-
-        // ✅ NEW: Validate sorting parameters
-        const validSortFields = ['departure_time', 'price', 'duration'];
-        const validSortOrders = ['ASC', 'DESC', 'asc', 'desc'];
-
-        if (searchCriteria.sort_by && !validSortFields.includes(searchCriteria.sort_by)) {
-            return res
-                .status(StatusCodes.BAD_REQUEST)
-                .json(Responses.ErrorResponse(
-                    {
-                        message: `Invalid sort_by field. Valid options: ${validSortFields.join(', ')}`,
-                        provided: searchCriteria.sort_by,
-                        valid_options: validSortFields
-                    },
-                    'Invalid sorting parameter'
-                ));
-        }
-
-        if (searchCriteria.sort_order && !validSortOrders.includes(searchCriteria.sort_order)) {
-            return res
-                .status(StatusCodes.BAD_REQUEST)
-                .json(Responses.ErrorResponse(
-                    {
-                        message: `Invalid sort_order. Valid options: ${validSortOrders.join(', ')}`,
-                        provided: searchCriteria.sort_order,
-                        valid_options: validSortOrders
-                    },
-                    'Invalid sorting parameter'
-                ));
-        }
 
         // Call service method
         const searchResults = await flightService.searchFlights(searchCriteria);
@@ -181,6 +136,68 @@ async function searchFlights(req, res, next) {
     }
 }
 
+async function fullSearch(req, res) {
+    try {
+        const { ap, dt, ps, sc } = req.query;
+
+
+        const baseKey = `fullsearch:${ap}:${dt}:${ps}:${sc}`;
+        console.log("PING:", await redisClient.ping());
+        console.log("Check BEFORE GET:");
+        console.log("TTL before get:", await redisClient.ttl(baseKey));
+
+        // Check cache
+        let cached = await redisClient.get(baseKey)
+
+
+        if (cached) {
+
+            cached = JSON.parse(cached)
+
+            // Xử lý filter + sort
+            const processed = applyFiltersAndSorting(cached, req.query)
+
+            return res.json({
+                success: true,
+                data: processed,
+                meta: {
+                    total: processed.length,
+                    query: req.query,
+                    timestamp: new Date().toISOString()
+                }
+            })
+        }
+        console.log('callback full search')
+
+        const data = await FlightSearchService.fullSearch(req.query);
+
+        // set cache
+        await redisClient.set(baseKey, JSON.stringify(data), {
+            EX: 600
+        });
+
+        const processed = applyFiltersAndSorting(data, req.query);
+
+        return res.status(200).json({
+            success: true,
+            data: processed,
+            meta: {
+                total: processed.flights.length,
+                query: req.query,
+                timestamp: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('Flight search error:', error);
+        return res.status(400).json({
+            success: false,
+            message: error.message || 'Flight search failed',
+            data: null
+        });
+    }
+}
+
+
 
 module.exports = {
     createFlight,
@@ -188,5 +205,6 @@ module.exports = {
     getFlightById,
     updateFlight,
     deleteFlight,
-    searchFlights,      // ✅ UPDATED
+    searchFlights,
+    fullSearch,
 };

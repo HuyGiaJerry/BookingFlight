@@ -1,6 +1,6 @@
 module.exports = {
     HomeController: require('./home-controller'),
-    // AuthController: require('./auth-controller'),
+    AuthController: require('./auth-controller'),
     AirportController: require('./airport-controller'),
     AirlineController: require('./airline-controller'),
     AirplaneController: require('./airplane-controller'),

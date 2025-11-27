@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const { authorize } = require('../../middlewares/rbac-middleware')
 const { AirportController } = require('../../controllers');
 
-router.post('/', AirportController.createAirport);
+router.post('/',AirportController.createAirport);
 router.get('/', AirportController.getAllAirports);
 router.get('/search', AirportController.searchAirports);
 router.get('/:id', AirportController.getAirportById);

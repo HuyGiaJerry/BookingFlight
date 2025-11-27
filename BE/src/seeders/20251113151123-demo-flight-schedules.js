@@ -4,7 +4,7 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     const schedules = [];
-    const baseDate = new Date('2025-11-15');
+    const baseDate = new Date('2025-11-28');
 
     for (let day = 0; day < 30; day++) {
       const currentDate = new Date(baseDate);

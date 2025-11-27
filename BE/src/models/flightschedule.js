@@ -18,6 +18,12 @@ module.exports = (sequelize, DataTypes) => {
       // 1 FlightSchedule has many FlightSeats
       FlightSchedule.hasMany(models.FlightSeat, { foreignKey: 'flight_schedule_id', as: 'flightSeats' });
 
+      // 1 FlightSchedule has many BookingFlights
+      FlightSchedule.hasMany(models.BookingFlight, { foreignKey: 'flight_schedule_id', as: 'bookingFlights' } );
+
+      // 1 FlightSchedule has many FlightServiceOffers
+      FlightSchedule.hasMany(models.FlightServiceOffer, { foreignKey: 'flight_schedule_id', as: 'flightServiceOffers' } );
+
     }
   }
   FlightSchedule.init({

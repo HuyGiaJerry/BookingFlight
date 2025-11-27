@@ -10,10 +10,20 @@ module.exports = (sequelize, DataTypes) => {
       Account.belongsTo(models.Role, { foreignKey: 'role_id', as: 'role' });
 
       // Account has many AccountUpdates
-      Account.hasMany(models.AccountUpdate, { foreignKey: 'account_id', as: 'accountUpdates' } );
+      Account.hasMany(models.AccountUpdate, { foreignKey: 'account_id', as: 'accountUpdates' });
 
       // Account has many RoleUpdates
-      Account.hasMany(models.RoleUpdate, { foreignKey: 'account_id', as: 'roleUpdates' } );
+      Account.hasMany(models.RoleUpdate, { foreignKey: 'account_id', as: 'roleUpdates' });
+
+      // Account has many Passengers
+      Account.hasMany(models.Passenger, { foreignKey: 'account_id', as: 'passengers' });
+
+      // Account has many BookingSessions
+      Account.hasMany(models.BookingSession, { foreignKey: 'account_id', as: 'bookingSessions' });
+
+      // Account has many Bookings
+      Account.hasMany(models.Booking, { foreignKey: 'account_id', as: 'bookings' });
+
 
     }
   }

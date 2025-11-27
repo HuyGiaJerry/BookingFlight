@@ -1,7 +1,7 @@
 const express = require('express');
 
 
-const {HomeController} = require('../../controllers');
+const { HomeController } = require('../../controllers');
 const authRouter = require('./auth-routes');
 const airportRouter = require('./airport-routes');
 const airlineRouter = require('./airline-routes');
@@ -12,7 +12,7 @@ const roleRouter = require('./role-rotes')
 // const flightScheduleFareRouter = require('./flightschedulefare-routes');
 // const oauthRouter = require('./oauth-routes');
 // const bookingRouter = require('./booking-routes');
-const {ProtectedRoutes} = require('../../middlewares');
+const { ProtectedRoutes } = require('../../middlewares');
 const router = express.Router();
 
 
@@ -25,8 +25,19 @@ router.use('/flights', flightRouter);
 router.use('/roles', roleRouter)
 // router.use('/flight-schedules', flightScheduleRouter);
 // router.use('/flight-schedule-fares', flightScheduleFareRouter);
+router.use('/flight-summary', flightSummaryRoutes);
+
 // router.use('/oauth', oauthRouter);
-// router.use('/bookings', bookingRouter);
+
+
+router.use('/booking', bookingRoutes);
+router.use('/seats', seatRoutes);
+router.use('/services', serviceOfferRoutes);
+router.use('/passengers', passengerRoutes);
+router.use('/seat-selection', seatSelectionRoutes);
+router.use('/service-selection', servicesSelectionRoutes);
+router.use('/flight-selection', flightSelectionRoutes);
+
 // test router
 
 // private routes

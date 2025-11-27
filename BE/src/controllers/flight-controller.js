@@ -88,7 +88,7 @@ async function deleteFlight(req, res, next) {
 async function searchFlights(req, res, next) {
     try {
         console.log('🎯 Controller - Flight search initiated');
-        console.log('📋 Search criteria received:', req.query);
+        console.log('📋 Raw query received:', req.query);
 
         // Validate that we have some search criteria
         if (!req.query || Object.keys(req.query).length === 0) {
@@ -108,13 +108,7 @@ async function searchFlights(req, res, next) {
         console.log('📊 Results summary:', {
             trip_type: searchResults.trip_type,
             success: searchResults.success,
-            has_results: searchResults.results ? 'yes' : 'no',
-            // ✅ NEW: Log schedule-based results
-            total_schedules: searchResults.trip_type === 'one-way' ?
-                searchResults.results?.summary?.total_schedules :
-                (searchResults.results?.summary?.outbound_schedules || 0) +
-                (searchResults.results?.summary?.inbound_schedules || 0),
-            pagination_type: 'schedule-based' // ✅ NEW
+            has_results: searchResults.results ? 'yes' : 'no'
         });
 
         // Return formatted response

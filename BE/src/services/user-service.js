@@ -161,86 +161,26 @@ class UserService {
         }
     }
 
-    // async verifyCaptcha(token) {
-    //     try {
-    //         // ✅ BYPASS: Skip in development
-    //         if (process.env.NODE_ENV === 'development') {
-    //             console.log('🚨 CAPTCHA BYPASSED - Development Mode');
-    //             console.log('- Environment:', process.env.NODE_ENV);
-    //             console.log('- Token received:', !!token);
-    //             return true; // ✅ Always return true in development
-    //         }
+    async verifyCaptcha(captchaToken) {
+        try {
+            // ====== VERIFY CAPTCHA ==========
+            const verifyUrl = "https://www.google.com/recaptcha/api/siteverify";
 
-    //         // ✅ PRODUCTION: Normal captcha verification
-    //         const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+            const r = await fetch(verifyUrl, {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`
+            });
 
-    //         console.log('🔍 CAPTCHA DEBUG START:');
-    //         console.log('- Environment:', process.env.NODE_ENV);
-    //         console.log('- Secret Key exists:', !!secretKey);
-    //         console.log('- Secret Key value:', secretKey);
-    //         console.log('- Token exists:', !!token);
-    //         console.log('- Token length:', token ? token.length : 0);
-    //         console.log('- Token preview:', token ? token.substring(0, 50) + '...' : 'N/A');
-
-    //         if (!secretKey) {
-    //             console.error('❌ RECAPTCHA_SECRET_KEY missing from environment');
-    //             return false;
-    //         }
-
-    //         if (!token) {
-    //             console.error('❌ Captcha token is missing');
-    //             return false;
-    //         }
-
-    //         const params = new URLSearchParams();
-    //         params.append('secret', secretKey);
-    //         params.append('response', token);
-
-    //         console.log('📤 Request to Google:');
-    //         console.log('- URL: https://www.google.com/recaptcha/api/siteverify');
-    //         console.log('- Params:', params.toString());
-
-    //         const response = await axios.post(
-    //             'https://www.google.com/recaptcha/api/siteverify',
-    //             params,
-    //             {
-    //                 headers: {
-    //                     'Content-Type': 'application/x-www-form-urlencoded',
-    //                 },
-    //                 timeout: 10000
-    //             }
-    //         );
-
-    //         console.log('📥 Google Response:');
-    //         console.log('- Status:', response.status);
-    //         console.log('- Data:', JSON.stringify(response.data, null, 2));
-
-    //         if (response.data.success) {
-    //             console.log('✅ Captcha verification SUCCESS');
-    //             return true;
-    //         } else {
-    //             console.log('❌ Captcha verification FAILED');
-    //             console.log('- Error codes:', response.data['error-codes']);
-
-    //             // ✅ Explain error codes
-    //             const errorCodes = response.data['error-codes'];
-    //             if (errorCodes.includes('timeout-or-duplicate')) {
-    //                 console.log('- Issue: Token already used or expired (need fresh token)');
-    //             } else if (errorCodes.includes('invalid-input-response')) {
-    //                 console.log('- Issue: Invalid token format');
-    //             }
-
-    //             return false;
-    //         }
-
-    //     } catch (error) {
-    //         console.error('❌ Exception during captcha verification:');
-    //         console.error('- Error message:', error.message);
-    //         console.error('- Error details:', error.response?.data || 'No response data');
-    //         return false;
-    //     }
-    // }
-
+            const data = await r.json();
+            console.log("Captcha verification:", data);
+            return data;
+        } catch (error) {
+            throw new AppError('Captcha verification failed', StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
 
 
 }

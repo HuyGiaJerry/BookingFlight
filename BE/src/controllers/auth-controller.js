@@ -24,47 +24,47 @@ async function signUp(req, res) {
 };
 
 
-async function signIn(req, res) {
-    try {
-        const {captchaToken} = req.body;
-        console.log('Captcha Token:', captchaToken);
-        if (!captchaToken) return res
-            .status(StatusCodes.BAD_REQUEST)
-            .json({ error: 'Captcha missing' });
+// async function signIn(req, res) {
+//     try {
+//         const {captchaToken} = req.body;
+//         console.log('Captcha Token:', captchaToken);
+//         if (!captchaToken) return res
+//             .status(StatusCodes.BAD_REQUEST)
+//             .json({ error: 'Captcha missing' });
 
-        const verifyUrl = `https://www.google.com/recaptcha/api/siteverify`;
+//         const verifyUrl = `https://www.google.com/recaptcha/api/siteverify`;
 
-        const r = await fetch(verifyUrl, {
-            method: 'POST',
-            headers: {},
-            body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`
-        });
-        const data = await r.json();
-        console.log('Captcha verification response:', data);
+//         const r = await fetch(verifyUrl, {
+//             method: 'POST',
+//             headers: {},
+//             body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`
+//         });
+//         const data = await r.json();
+//         console.log('Captcha verification response:', data);
 
-        if(!data.success) return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Captcha invalid' });
+//         if(!data.success) return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Captcha invalid' });
 
 
-        const { accessToken, refreshToken } = await userService.signIn(req.body);
-    
-        res.cookie('refreshToken', refreshToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        });
-        // Lưu refresh token vào db
+//         const { accessToken, refreshToken } = await userService.signIn(req.body);
 
-        return res
-            .status(StatusCodes.OK)
-            .json({ accessToken });
-    } catch (error) {
-        console.error('Error sign in :', error);
-        return res
-            .status(StatusCodes.INTERNAL_SERVER_ERROR)
-            .json({ error: 'Internal Server Error' });
-    }
-};
+//         res.cookie('refreshToken', refreshToken, {
+//             httpOnly: true,
+//             secure: true,
+//             sameSite: 'none',
+//             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+//         });
+//         // Lưu refresh token vào db
+
+//         return res
+//             .status(StatusCodes.OK)
+//             .json({ accessToken });
+//     } catch (error) {
+//         console.error('Error sign in :', error);
+//         return res
+//             .status(StatusCodes.INTERNAL_SERVER_ERROR)
+//             .json({ error: 'Internal Server Error' });
+//     }
+// };
 
 
 async function signOut(req, res) {
@@ -72,13 +72,13 @@ async function signOut(req, res) {
         const refreshToken = req.cookies?.refreshToken;
         // ✅ FIXED: Pass object với property name đúng
         await userService.signOut({ refreshToken }); // Thay vì chỉ pass refreshToken
-        
+
         res.clearCookie('refreshToken', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
         });
-        
+
         return res
             .status(StatusCodes.OK)
             .json({ message: 'Signed out successfully' }); // ✅ FIXED: Return JSON
@@ -121,6 +121,49 @@ async function refreshToken(req, res) {
         return res.status(403).json({
             message: 'Phiên đăng nhập không hợp lệ'
         });
+    }
+}
+
+
+async function signIn(req, res) {
+    try {
+        const { captchaToken } = req.body;
+        console.log('Captcha Token:', captchaToken);
+
+        if (!captchaToken) {
+            return res
+                .status(StatusCodes.BAD_REQUEST)
+                .json({ error: 'Captcha missing' });
+        }
+
+        const data = await userService.verifyCaptcha(captchaToken);
+
+        if (!data.success) {
+            return res
+                .status(StatusCodes.BAD_REQUEST)
+                .json({ error: 'Captcha invalid' });
+        }
+        // =================================
+
+        // Xử lý login
+        const { accessToken, refreshToken } = await userService.signIn(req.body);
+
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        return res
+            .status(StatusCodes.OK)
+            .json({ accessToken });
+
+    } catch (error) {
+        console.error("Error sign in:", error);
+        return res
+            .status(StatusCodes.INTERNAL_SERVER_ERROR)
+            .json({ error: 'Internal Server Error' });
     }
 }
 

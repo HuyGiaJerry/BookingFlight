@@ -26,12 +26,11 @@ async function signUp(req, res) {
 
 async function signIn(req, res) {
     try {
-        const { accessToken, refreshToken, captchaToken } = await userService.signIn(req.body);
-
-        if(!captchaToken) return res
+        const captchaToken = req.body.captchaToken;
+        if (!captchaToken) return res
             .status(StatusCodes.BAD_REQUEST)
             .json({ error: 'Captcha missing' });
-        
+        const { accessToken, refreshToken } = await userService.signIn(req.body);
         const isCaptchaValid = await userService.verifyCaptcha(captchaToken);
         if (!isCaptchaValid) return res
             .status(StatusCodes.BAD_REQUEST)
@@ -82,10 +81,10 @@ async function refreshToken(req, res) {
         const session = await Session.findValidByRefreshToken(oldToken);
 
         if (!session) {
-            res.clearCookie('refreshToken', { 
-                httpOnly: true, 
-                secure: true, 
-                sameSite: 'none' 
+            res.clearCookie('refreshToken', {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none'
             });
             return res.status(403).json({
                 message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'

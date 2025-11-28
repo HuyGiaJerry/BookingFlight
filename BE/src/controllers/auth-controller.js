@@ -26,15 +26,17 @@ async function signUp(req, res) {
 
 async function signIn(req, res) {
     try {
-        const captchaToken = req.body.captchaToken;
+        const { captchaToken } = req.body;
+        console.log('Captcha Token:', captchaToken);
         if (!captchaToken) return res
             .status(StatusCodes.BAD_REQUEST)
             .json({ error: 'Captcha missing' });
-        const { accessToken, refreshToken } = await userService.signIn(req.body);
         const isCaptchaValid = await userService.verifyCaptcha(captchaToken);
         if (!isCaptchaValid) return res
             .status(StatusCodes.BAD_REQUEST)
             .json({ error: 'Captcha invalid' });
+
+        const { accessToken, refreshToken } = await userService.signIn(req.body);
 
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
@@ -59,12 +61,20 @@ async function signIn(req, res) {
 async function signOut(req, res) {
     try {
         const refreshToken = req.cookies?.refreshToken;
-        await userService.signOut(refreshToken);
-        res.clearCookie('refreshToken');
+        // ✅ FIXED: Pass object với property name đúng
+        await userService.signOut({ refreshToken }); // Thay vì chỉ pass refreshToken
+
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+        });
+
         return res
-            .status(StatusCodes.OK);
+            .status(StatusCodes.OK)
+            .json({ message: 'Signed out successfully' }); // ✅ FIXED: Return JSON
     } catch (error) {
-        console.error('Error sign out :', error);
+        console.error('Error sign out:', error);
         return res
             .status(StatusCodes.INTERNAL_SERVER_ERROR)
             .json({ error: 'Internal Server Error' });

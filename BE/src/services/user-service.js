@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const TokenService = require('./token-service');
 const AppError = require('../utils/errors/app-error');
 const { StatusCodes } = require('http-status-codes');
-const { axios } = require('axios');
+const axios = require('axios');
 
 class UserService {
     constructor({ userRepo, sessionRepo }) {
@@ -47,11 +47,11 @@ class UserService {
     async signIn(data, options = {}) {
         try {
 
-            const { phone_number, password  } = data;
+            const { phone_number, password } = data;
             if (!phone_number || !password) {
                 throw new Error('Thiếu thông tin đăng nhập !');
             }
-            
+
             // so sánh hashed pass với pass input
             const user = await this.userRepository.findByPhoneNumber(phone_number);
             if (!user) {
@@ -162,19 +162,68 @@ class UserService {
     }
 
     async verifyCaptcha(token) {
-        const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+        try {
+            const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
-        const response = await axios.post(
-            `https://www.google.com/recaptcha/api/siteverify`,
-            null,
-            {
-                params: {
-                    secret: secret,
-                    response: token,
-                },
+            console.log('🔍 CAPTCHA DEBUG START:');
+            console.log('- Environment:', process.env.NODE_ENV);
+            console.log('- Secret Key exists:', !!secretKey);
+            console.log('- Secret Key value:', secretKey); // ✅ TEMP: Show full key for debug
+            console.log('- Token exists:', !!token);
+            console.log('- Token length:', token ? token.length : 0);
+            console.log('- Token preview:', token ? token.substring(0, 50) + '...' : 'N/A');
+
+            if (!secretKey) {
+                console.error('❌ RECAPTCHA_SECRET_KEY missing from environment');
+                return false;
             }
-        );
-        return response.data.success;
+
+            if (!token) {
+                console.error('❌ Captcha token is missing');
+                return false;
+            }
+
+            // ✅ FIXED: Sử dụng URLSearchParams để đảm bảo format đúng
+            const params = new URLSearchParams();
+            params.append('secret', secretKey);
+            params.append('response', token);
+
+            console.log('📤 Request to Google:');
+            console.log('- URL: https://www.google.com/recaptcha/api/siteverify');
+            console.log('- Params:', params.toString());
+
+            const response = await axios.post(
+                'https://www.google.com/recaptcha/api/siteverify',
+                params,
+                {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    timeout: 10000
+                }
+            );
+
+            console.log('📥 Google Response:');
+            console.log('- Status:', response.status);
+            console.log('- Data:', JSON.stringify(response.data, null, 2));
+
+            if (response.data.success) {
+                console.log('✅ Captcha verification SUCCESS');
+                return true;
+            } else {
+                console.log('❌ Captcha verification FAILED');
+                console.log('- Error codes:', response.data['error-codes']);
+                console.log('- Challenge timestamp:', response.data.challenge_ts);
+                console.log('- Hostname:', response.data.hostname);
+                return false;
+            }
+
+        } catch (error) {
+            console.error('❌ Exception during captcha verification:');
+            console.error('- Error message:', error.message);
+            console.error('- Error details:', error.response?.data || 'No response data');
+            return false;
+        }
     }
 
 

@@ -26,18 +26,27 @@ async function signUp(req, res) {
 
 async function signIn(req, res) {
     try {
-        const { captchaToken } = req.body;
+        const {captchaToken} = req.body;
         console.log('Captcha Token:', captchaToken);
         if (!captchaToken) return res
             .status(StatusCodes.BAD_REQUEST)
             .json({ error: 'Captcha missing' });
-        const isCaptchaValid = await userService.verifyCaptcha(captchaToken);
-        if (!isCaptchaValid) return res
-            .status(StatusCodes.BAD_REQUEST)
-            .json({ error: 'Captcha invalid' });
+
+        const verifyUrl = `https://www.google.com/recaptcha/api/siteverify`;
+
+        const r = await fetch(verifyUrl, {
+            method: 'POST',
+            headers: {},
+            body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`
+        });
+        const data = await r.json();
+        console.log('Captcha verification response:', data);
+
+        if(!data.success) return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Captcha invalid' });
+
 
         const { accessToken, refreshToken } = await userService.signIn(req.body);
-
+    
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
             secure: true,
@@ -63,13 +72,13 @@ async function signOut(req, res) {
         const refreshToken = req.cookies?.refreshToken;
         // ✅ FIXED: Pass object với property name đúng
         await userService.signOut({ refreshToken }); // Thay vì chỉ pass refreshToken
-
+        
         res.clearCookie('refreshToken', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
         });
-
+        
         return res
             .status(StatusCodes.OK)
             .json({ message: 'Signed out successfully' }); // ✅ FIXED: Return JSON

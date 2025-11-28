@@ -161,70 +161,85 @@ class UserService {
         }
     }
 
-    async verifyCaptcha(token) {
-        try {
-            const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    // async verifyCaptcha(token) {
+    //     try {
+    //         // ✅ BYPASS: Skip in development
+    //         if (process.env.NODE_ENV === 'development') {
+    //             console.log('🚨 CAPTCHA BYPASSED - Development Mode');
+    //             console.log('- Environment:', process.env.NODE_ENV);
+    //             console.log('- Token received:', !!token);
+    //             return true; // ✅ Always return true in development
+    //         }
 
-            console.log('🔍 CAPTCHA DEBUG START:');
-            console.log('- Environment:', process.env.NODE_ENV);
-            console.log('- Secret Key exists:', !!secretKey);
-            console.log('- Secret Key value:', secretKey); // ✅ TEMP: Show full key for debug
-            console.log('- Token exists:', !!token);
-            console.log('- Token length:', token ? token.length : 0);
-            console.log('- Token preview:', token ? token.substring(0, 50) + '...' : 'N/A');
+    //         // ✅ PRODUCTION: Normal captcha verification
+    //         const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
-            if (!secretKey) {
-                console.error('❌ RECAPTCHA_SECRET_KEY missing from environment');
-                return false;
-            }
+    //         console.log('🔍 CAPTCHA DEBUG START:');
+    //         console.log('- Environment:', process.env.NODE_ENV);
+    //         console.log('- Secret Key exists:', !!secretKey);
+    //         console.log('- Secret Key value:', secretKey);
+    //         console.log('- Token exists:', !!token);
+    //         console.log('- Token length:', token ? token.length : 0);
+    //         console.log('- Token preview:', token ? token.substring(0, 50) + '...' : 'N/A');
 
-            if (!token) {
-                console.error('❌ Captcha token is missing');
-                return false;
-            }
+    //         if (!secretKey) {
+    //             console.error('❌ RECAPTCHA_SECRET_KEY missing from environment');
+    //             return false;
+    //         }
 
-            // ✅ FIXED: Sử dụng URLSearchParams để đảm bảo format đúng
-            const params = new URLSearchParams();
-            params.append('secret', secretKey);
-            params.append('response', token);
+    //         if (!token) {
+    //             console.error('❌ Captcha token is missing');
+    //             return false;
+    //         }
 
-            console.log('📤 Request to Google:');
-            console.log('- URL: https://www.google.com/recaptcha/api/siteverify');
-            console.log('- Params:', params.toString());
+    //         const params = new URLSearchParams();
+    //         params.append('secret', secretKey);
+    //         params.append('response', token);
 
-            const response = await axios.post(
-                'https://www.google.com/recaptcha/api/siteverify',
-                params,
-                {
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    timeout: 10000
-                }
-            );
+    //         console.log('📤 Request to Google:');
+    //         console.log('- URL: https://www.google.com/recaptcha/api/siteverify');
+    //         console.log('- Params:', params.toString());
 
-            console.log('📥 Google Response:');
-            console.log('- Status:', response.status);
-            console.log('- Data:', JSON.stringify(response.data, null, 2));
+    //         const response = await axios.post(
+    //             'https://www.google.com/recaptcha/api/siteverify',
+    //             params,
+    //             {
+    //                 headers: {
+    //                     'Content-Type': 'application/x-www-form-urlencoded',
+    //                 },
+    //                 timeout: 10000
+    //             }
+    //         );
 
-            if (response.data.success) {
-                console.log('✅ Captcha verification SUCCESS');
-                return true;
-            } else {
-                console.log('❌ Captcha verification FAILED');
-                console.log('- Error codes:', response.data['error-codes']);
-                console.log('- Challenge timestamp:', response.data.challenge_ts);
-                console.log('- Hostname:', response.data.hostname);
-                return false;
-            }
+    //         console.log('📥 Google Response:');
+    //         console.log('- Status:', response.status);
+    //         console.log('- Data:', JSON.stringify(response.data, null, 2));
 
-        } catch (error) {
-            console.error('❌ Exception during captcha verification:');
-            console.error('- Error message:', error.message);
-            console.error('- Error details:', error.response?.data || 'No response data');
-            return false;
-        }
-    }
+    //         if (response.data.success) {
+    //             console.log('✅ Captcha verification SUCCESS');
+    //             return true;
+    //         } else {
+    //             console.log('❌ Captcha verification FAILED');
+    //             console.log('- Error codes:', response.data['error-codes']);
+
+    //             // ✅ Explain error codes
+    //             const errorCodes = response.data['error-codes'];
+    //             if (errorCodes.includes('timeout-or-duplicate')) {
+    //                 console.log('- Issue: Token already used or expired (need fresh token)');
+    //             } else if (errorCodes.includes('invalid-input-response')) {
+    //                 console.log('- Issue: Invalid token format');
+    //             }
+
+    //             return false;
+    //         }
+
+    //     } catch (error) {
+    //         console.error('❌ Exception during captcha verification:');
+    //         console.error('- Error message:', error.message);
+    //         console.error('- Error details:', error.response?.data || 'No response data');
+    //         return false;
+    //     }
+    // }
 
 
 

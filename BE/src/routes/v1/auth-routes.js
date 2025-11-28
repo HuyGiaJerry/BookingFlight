@@ -8,4 +8,4 @@ router.post('/signin', AuthController.signIn);
 router.post('/signout', AuthController.signOut);
 router.post('/refresh_token', AuthController.refreshToken)
 
-module.exports = router;
+module.exports = router;    

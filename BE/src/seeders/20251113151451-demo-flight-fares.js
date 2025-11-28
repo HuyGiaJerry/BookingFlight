@@ -18,7 +18,7 @@ module.exports = {
 
     const fares = [];
 
-    // Price configuration
+    // ✅ UPDATED: Price configuration based on new class structure
     const basePrices = {
       domestic: 1500000,
       international: 3500000
@@ -26,9 +26,9 @@ module.exports = {
 
     const classMultipliers = {
       1: 1.0,    // Economy
-      2: 1.5,    // Premium Economy
-      3: 3.0,    // Business
-      4: 5.0     // First Class
+      2: 1.8,    // Premium Economy (increased from 1.5)
+      3: 3.5,    // Business (increased from 3.0)
+      4: 6.0     // First Class (increased from 5.0)
     };
 
     for (const schedule of schedules) {
@@ -36,7 +36,7 @@ module.exports = {
       const isInternational = [2, 12, 13].includes(schedule.airplane_id);
       const basePrice = isInternational ? basePrices.international : basePrices.domestic;
 
-      // Determine available classes based on airplane type
+      // ✅ UPDATED: Determine available classes based on airplane type
       const availableClasses = getAvailableClasses(schedule.model, isInternational);
 
       for (const seatClass of seatClasses) {
@@ -47,7 +47,7 @@ module.exports = {
         const tax = Math.round(finalBasePrice * 0.1);
         const serviceFee = Math.round(finalBasePrice * 0.05);
 
-        // Calculate seat allocation based on actual seat layout
+        // ✅ UPDATED: Calculate seat allocation based on NEW seat layout
         const seatCounts = getSeatCountsForClass(schedule.airplane_id, seatClass.id, schedule.model);
         const seatsBooked = Math.floor(Math.random() * seatCounts.total * 0.7); // 0-70% booked
         const seatsAvailable = seatCounts.total - seatsBooked;
@@ -68,65 +68,63 @@ module.exports = {
       }
     }
 
-    console.log(`Total flight fares created: ${fares.length}`);
+    console.log(`✅ Total flight fares created: ${fares.length}`);
     await queryInterface.bulkInsert('FlightFares', fares, {});
     return fares.length;
 
-    // Helper functions
+    // ✅ UPDATED: Helper functions based on new seat configuration
     function getAvailableClasses(model, isInternational) {
       if (model.includes('A320')) {
-        return [1]; // Economy only
+        return [1]; // Economy only (single-class configuration)
       } else if (model.includes('A321')) {
-        return isInternational ? [1, 2, 3] : [1, 3]; // Economy + Business, Premium if international
-      } else if (model.includes('A350') || model.includes('787')) {
-        return [1, 2, 3, 4]; // All classes
-      } else if (model.includes('777')) {
-        return [1, 2, 3, 4]; // All classes
+        return isInternational ? [1, 3, 4] : [1, 3, 4]; // Economy + Business + First Class
+      } else if (model.includes('A350') || model.includes('787') || model.includes('777')) {
+        return [1, 2, 3, 4]; // All classes available (wide-body aircraft)
       }
-      return [1]; // Default to economy
+      return [1]; // Default to economy only
     }
 
     function getSeatCountsForClass(airplaneId, classId, model) {
-      // Hardcoded based on our seat layout configuration
+      // ✅ UPDATED: Seat counts based on NEW layout configuration
       const seatCounts = {
-        // A321 - 184 total
+        // A321 - 184 total (First: 12, Business: 12, Economy: 160)
         'A321': {
-          1: 172, // Economy
-          2: 0,   // No premium economy
-          3: 12,  // Business
-          4: 0    // No first class
+          1: 160, // Economy (rows 7-32, skip row 17)
+          2: 0,   // No Premium Economy
+          3: 12,  // Business (rows 4-6)
+          4: 12   // First Class (rows 1-3)
         },
-        // A350 - 305 total
+        // A350 - 305 total (First: 6, Business: 12, Premium: 21, Economy: 266)
         'A350': {
-          1: 252, // Economy
-          2: 21,  // Premium Economy
-          3: 28,  // Business
-          4: 4    // First Class
+          1: 266, // Economy (rows 10-47)
+          2: 21,  // Premium Economy (rows 7-9)
+          3: 12,  // Business (rows 4-6)
+          4: 6    // First Class (rows 1-3)
         },
-        // Boeing 787 - 294 total
+        // Boeing 787 - 294 total (First: 6, Business: 12, Premium: 21, Economy: 255)
         'B787': {
-          1: 241, // Economy
-          2: 21,  // Premium Economy
-          3: 32,  // Business
-          4: 0    // No first class
+          1: 255, // Economy (rows 10-44, skip row 30)
+          2: 21,  // Premium Economy (rows 7-9)
+          3: 12,  // Business (rows 4-6)
+          4: 6    // First Class (rows 1-3)
         },
-        // A320 - 180 total
+        // A320 - 180 total (Economy only)
         'A320': {
           1: 180, // Economy only
           2: 0, 3: 0, 4: 0
         },
-        // Boeing 777 - 346 total
+        // Boeing 777 - 346 total (First: 6, Business: 12, Premium: 21, Economy: 307)
         'B777': {
-          1: 282, // Economy
-          2: 28,  // Premium Economy
-          3: 32,  // Business
-          4: 4    // First Class
+          1: 307, // Economy (rows 10-44, skip rows 25&35)
+          2: 21,  // Premium Economy (rows 7-9)
+          3: 12,  // Business (rows 4-6)
+          4: 6    // First Class (rows 1-3)
         }
       };
 
       const modelKey = model.replace(/\s+/g, '').replace('Airbus', '').replace('Boeing', 'B');
       const counts = seatCounts[modelKey] || { 1: 180, 2: 0, 3: 0, 4: 0 };
-      
+
       return {
         total: counts[classId] || 0
       };

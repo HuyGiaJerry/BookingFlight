@@ -19,8 +19,4 @@ const flightSelectionController = new FlightSelectionController();
 // }
 router.post('/create-session', flightSelectionController.createFlightSelectionSession);
 
-// Get session data (for page reload)
-// GET /api/v1/flight-selection/session/:sessionId
-router.get('/session/:sessionId', flightSelectionController.getFlightSelectionSession);
-
 module.exports = router;

@@ -32,37 +32,36 @@ module.exports = {
         const random = Math.random();
         let status = 'available';
         let priceAdjustment = 0;
-        let blockedSessionId = null;         // ✅ SỬA: blockedSessionId
-        let blockedAt = null;                // ✅ SỬA: blockedAt
-        let blockedUntil = null;             // ✅ SỬA: blockedUntil
+        let blockedSessionId = null;
+        let blockedAt = null;
+        let blockedUntil = null;
 
         // Status distribution
         if (random < 0.30) {
           status = 'booked';
-          // ❌ Không set blocked_at cho booked seats
         } else if (random < 0.33) {
           status = 'blocked';
           blockedSessionId = 'session_' + Math.random().toString(36).substring(2, 15);
-          blockedAt = new Date();            // ✅ SỬA: blocked_at
-          blockedUntil = new Date(Date.now() + (5 + Math.random() * 10) * 60 * 1000); // ✅ SỬA: blocked_until
+          blockedAt = new Date();
+          blockedUntil = new Date(Date.now() + (5 + Math.random() * 10) * 60 * 1000);
         } else if (random < 0.36) {
           status = 'maintenance';
         }
 
-        // Price adjustments based on seat characteristics
-        if (seatLayout.seat_class_id === 4) { // First class
-          priceAdjustment = 500000;
+        // ✅ UPDATED: Price adjustments based on NEW seat class hierarchy
+        if (seatLayout.seat_class_id === 4) { // First Class
+          priceAdjustment = 800000; // Increased for First Class
         } else if (seatLayout.seat_class_id === 3) { // Business
-          priceAdjustment = 200000;
+          priceAdjustment = 300000; // Increased for Business
         } else if (seatLayout.seat_class_id === 2) { // Premium Economy
-          priceAdjustment = 100000;
-        } else { // Economy
+          priceAdjustment = 150000; // Increased for Premium Economy
+        } else { // Economy (class_id === 1)
           if (seatLayout.seat_row <= 5) {
-            priceAdjustment = 50000; // Front rows
+            priceAdjustment = 75000; // Front economy rows (premium location)
           } else if (seatLayout.is_window) {
-            priceAdjustment = 25000; // Window seats
+            priceAdjustment = 35000; // Window seats
           } else if (seatLayout.is_aisle) {
-            priceAdjustment = 15000; // Aisle seats
+            priceAdjustment = 25000; // Aisle seats
           }
         }
 
@@ -70,9 +69,9 @@ module.exports = {
           flight_schedule_id: schedule.schedule_id,
           seat_layout_id: seatLayout.layout_id,
           price_adjustment: priceAdjustment,
-          blocked_session_id: blockedSessionId,  // ✅ SỬA: blocked_session_id
-          blocked_at: blockedAt,                 // ✅ SỬA: blocked_at
-          blocked_until: blockedUntil,           // ✅ SỬA: blocked_until
+          blocked_session_id: blockedSessionId,
+          blocked_at: blockedAt,
+          blocked_until: blockedUntil,
           status: status,
           createdAt: new Date(),
           updatedAt: new Date()
@@ -80,7 +79,7 @@ module.exports = {
       });
 
       if (schedule.schedule_id % 100 === 0) {
-        console.log(`Processed schedule ${schedule.schedule_id}/${schedules.length}`);
+        console.log(`📊 Processed schedule ${schedule.schedule_id}/${schedules.length}`);
       }
     }
 
@@ -89,10 +88,10 @@ module.exports = {
     for (let i = 0; i < flightSeats.length; i += batchSize) {
       const batch = flightSeats.slice(i, i + batchSize);
       await queryInterface.bulkInsert('FlightSeats', batch, {});
-      console.log(`Inserted FlightSeats batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(flightSeats.length / batchSize)}`);
+      console.log(`📦 Inserted FlightSeats batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(flightSeats.length / batchSize)}`);
     }
 
-    console.log(`Total flight seats created: ${flightSeats.length}`);
+    console.log(`✅ Total flight seats created: ${flightSeats.length}`);
     return flightSeats.length;
   },
 

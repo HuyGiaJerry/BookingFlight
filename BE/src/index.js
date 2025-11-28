@@ -20,8 +20,8 @@ app.use('/api', apiRouter);
 app.use(ErrorHandler);
 
 
-app.listen(ServerConfig.PORT, async () => {
-    console.log(`🚀 Server is running on port ${ServerConfig.PORT}`);
+app.listen(process.env.PORT || 3600, async () => {
+    console.log(`🚀 Server is running on port ${process.env.PORT || 3600}`);
     console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`📊 Database: ${sequelize.config.database} @ ${sequelize.config.host}:${sequelize.config.port || 3306}`);
     try {
@@ -65,4 +65,5 @@ process.on('uncaughtException', (error) => {
         global.seatCleanupService.stopAutoCleanup();
     }
     process.exit(1);
+    
 });

@@ -7,23 +7,85 @@ class SeatController {
     }
 
     /**
-     * ✅ NEW: Get Traveloka-style seat matrix
-     * 🔸 GET /api/v1/seats/traveloka-matrix/:flightScheduleId
+     * ✅ UPDATED: Get seat matrix với class filter
+     * 🔸 GET /api/v1/seats/matrix/:flightScheduleId?classId=1
      */
     getSeatMatrix = async (req, res) => {
         try {
             const { flightScheduleId } = req.params;
+            const { classId } = req.query; // ✅ THÊM: Query parameter cho class filter
 
-            const seatMatrix = await this.seatService.getTravelokaSeatMatrix(parseInt(flightScheduleId));
+            const seatClassId = classId ? parseInt(classId) : null;
+
+            const seatMatrix = await this.seatService.getTravelokaSeatMatrix(
+                parseInt(flightScheduleId),
+                seatClassId
+            );
 
             return res.status(StatusCodes.OK).json({
                 success: true,
-                message: 'Traveloka seat matrix retrieved successfully',
+                message: `Seat matrix retrieved successfully${seatClassId ? ' for class ' + seatClassId : ''}`,
                 data: seatMatrix
             });
 
         } catch (error) {
-            console.error('Error in getTravelokaSeatMatrix:', error);
+            console.error('Error in getSeatMatrix:', error);
+            return res.status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message || 'Internal server error'
+            });
+        }
+    };
+
+    /**
+     * ✅ NEW: Get seat count summary by class
+     * 🔸 GET /api/v1/seats/summary/:flightScheduleId
+     */
+    getSeatSummary = async (req, res) => {
+        try {
+            const { flightScheduleId } = req.params;
+
+            const summary = await this.seatService.getSeatClassSummary(parseInt(flightScheduleId));
+
+            return res.status(StatusCodes.OK).json({
+                success: true,
+                message: 'Seat class summary retrieved successfully',
+                data: {
+                    flight_schedule_id: parseInt(flightScheduleId),
+                    classes: summary
+                }
+            });
+
+        } catch (error) {
+            console.error('Error in getSeatSummary:', error);
+            return res.status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message || 'Internal server error'
+            });
+        }
+    };
+
+    /**
+     * ✅ NEW: Get seats for specific class only
+     * 🔸 GET /api/v1/seats/class/:flightScheduleId/:classId
+     */
+    getSeatsByClass = async (req, res) => {
+        try {
+            const { flightScheduleId, classId } = req.params;
+
+            const seatMatrix = await this.seatService.getSeatsByClass(
+                parseInt(flightScheduleId),
+                parseInt(classId)
+            );
+
+            return res.status(StatusCodes.OK).json({
+                success: true,
+                message: `Seats for class ${classId} retrieved successfully`,
+                data: seatMatrix
+            });
+
+        } catch (error) {
+            console.error('Error in getSeatsByClass:', error);
             return res.status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message || 'Internal server error'
@@ -61,20 +123,26 @@ class SeatController {
             const { seat_ids } = req.body;
 
             if (!seat_ids || !Array.isArray(seat_ids)) {
-                ErrorResponse.message = 'seat_ids array is required';
-                return res.status(StatusCodes.BAD_REQUEST).json(ErrorResponse);
+                return res.status(StatusCodes.BAD_REQUEST).json({
+                    success: false,
+                    message: 'seat_ids array is required'
+                });
             }
 
             const availability = await this.seatService.seatRepository.checkSeatAvailability(seat_ids);
 
-            SuccessResponse.message = 'Seat availability checked successfully';
-            SuccessResponse.data = availability;
-            return res.status(StatusCodes.OK).json(SuccessResponse);
+            return res.status(StatusCodes.OK).json({
+                success: true,
+                message: 'Seat availability checked successfully',
+                data: availability
+            });
 
         } catch (error) {
             console.error('Error in checkSeatAvailability:', error);
-            ErrorResponse.error = error;
-            return res.status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json(ErrorResponse);
+            return res.status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message || 'Internal server error'
+            });
         }
     };
 
@@ -85,8 +153,14 @@ class SeatController {
     debugSeatLayout = async (req, res) => {
         try {
             const { flightScheduleId } = req.params;
+            const { classId } = req.query; // ✅ THÊM: Class filter cho debug
 
-            const seatMapData = await this.seatService.seatRepository.getFlightSeatMap(parseInt(flightScheduleId));
+            const seatClassId = classId ? parseInt(classId) : null;
+
+            const seatMapData = await this.seatService.seatRepository.getFlightSeatMap(
+                parseInt(flightScheduleId),
+                seatClassId
+            );
 
             if (!seatMapData?.seat_map) {
                 return res.status(StatusCodes.NOT_FOUND).json({
@@ -99,12 +173,24 @@ class SeatController {
 
             // Analyze seat layout
             const analysis = {
+                flight_schedule_id: parseInt(flightScheduleId),
+                seat_class_id: seatClassId,
                 total_seats: seat_map.length,
                 unique_columns: [...new Set(seat_map.map(s => s.seat_column))].sort(),
                 unique_rows: [...new Set(seat_map.map(s => s.seat_row))].sort((a, b) => a - b),
+                class_breakdown: {},
                 seats_by_row: {},
                 column_analysis: {}
             };
+
+            // ✅ THÊM: Class breakdown
+            seat_map.forEach(seat => {
+                const classCode = seat.seat_class?.class_code || 'UNK';
+                if (!analysis.class_breakdown[classCode]) {
+                    analysis.class_breakdown[classCode] = 0;
+                }
+                analysis.class_breakdown[classCode]++;
+            });
 
             // Group seats by row
             seat_map.forEach(seat => {
@@ -132,7 +218,7 @@ class SeatController {
 
             return res.status(StatusCodes.OK).json({
                 success: true,
-                message: 'Seat layout analysis',
+                message: `Seat layout analysis${seatClassId ? ' for class ' + seatClassId : ''}`,
                 data: analysis
             });
 

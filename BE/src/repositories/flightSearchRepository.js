@@ -112,6 +112,7 @@ class FlightSearchRepository extends CrudRepository {
                 arrivalTime: arrival.time,
             }
         })
+        if (!formattedResult.length) throw new Error('No flights found')
         // result filter airline dynamic
         const airlineData = {}
 

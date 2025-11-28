@@ -3,6 +3,8 @@ const bcrypt = require('bcrypt');
 const TokenService = require('./token-service');
 const AppError = require('../utils/errors/app-error');
 const { StatusCodes } = require('http-status-codes');
+const { axios } = require('axios');
+
 class UserService {
     constructor({ userRepo, sessionRepo }) {
         this.userRepository = userRepo || new UserRepository();
@@ -45,10 +47,11 @@ class UserService {
     async signIn(data, options = {}) {
         try {
 
-            const { phone_number, password } = data;
+            const { phone_number, password  } = data;
             if (!phone_number || !password) {
                 throw new Error('Thiếu thông tin đăng nhập !');
             }
+            
             // so sánh hashed pass với pass input
             const user = await this.userRepository.findByPhoneNumber(phone_number);
             if (!user) {
@@ -157,6 +160,24 @@ class UserService {
             throw new AppError('Failed to save refresh token', StatusCodes.INTERNAL_SERVER_ERROR);
         }
     }
+
+    async verifyCaptcha(token) {
+        const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+
+        const response = await axios.post(
+            `https://www.google.com/recaptcha/api/siteverify`,
+            null,
+            {
+                params: {
+                    secret: secret,
+                    response: token,
+                },
+            }
+        );
+        return response.data.success;
+    }
+
+
 
 }
 module.exports = UserService;

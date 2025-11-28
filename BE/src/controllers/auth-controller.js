@@ -26,7 +26,16 @@ async function signUp(req, res) {
 
 async function signIn(req, res) {
     try {
-        const { accessToken, refreshToken } = await userService.signIn(req.body);
+        const { accessToken, refreshToken, captchaToken } = await userService.signIn(req.body);
+
+        if(!captchaToken) return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json({ error: 'Captcha missing' });
+        
+        const isCaptchaValid = await userService.verifyCaptcha(captchaToken);
+        if (!isCaptchaValid) return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json({ error: 'Captcha invalid' });
 
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,

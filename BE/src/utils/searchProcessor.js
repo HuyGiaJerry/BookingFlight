@@ -1,5 +1,28 @@
+
 function applyFiltersAndSorting(rawData, query) {
-    let flights = [...rawData.flights];
+    // one way
+    console.log('raw data', rawData.flights)
+    if (rawData.flights) {
+        return {
+            ...rawData,
+            flights: FiltersAndSortList(rawData.flights, query)
+        }
+    }
+
+    // round trip
+    console.log('raw data outbound', rawData.outbound.flights)
+    console.log('raw data inbound', rawData.inbound.flights)
+    if (rawData.outbound && rawData.inbound) {
+        return {
+            ...rawData,
+            outbound: FiltersAndSortList(rawData.outbound.flights, query),
+            inbound: FiltersAndSortList(rawData.inbound.flights, query)
+        }
+    }
+    return rawData
+}
+function FiltersAndSortList(flightsList, query) {
+    let flights = [...flightsList];
 
     // --- FILTER AIRLINE ---
     if (query.airline) {
@@ -64,7 +87,6 @@ function applyFiltersAndSorting(rawData, query) {
     }
 
     return {
-        ...rawData,
         flights
     };
 }

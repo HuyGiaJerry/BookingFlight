@@ -2,6 +2,9 @@ const FlightSearchRepository = require('../repositories/flightSearchRepository')
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
+const { regexDate } = require('../utils/RegexDate');
+const { VaildPassenger } = require('../utils/VaildPassenger')
+const { normalizeSeatClass } = require('../utils/normalizeSeatClass')
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -22,38 +25,20 @@ class FlightSearchService {
         const [depCode, arrCode] = ap.split('.').map(s => s.trim().toUpperCase());
 
         // === 2. Parse date ===
-
         if (!dt) throw new Error('Departure date required');
         const datePart = dt.split('.')[0];
+
         let departureDate;
 
-        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
-            departureDate = datePart;
-        } else if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(datePart)) {
-            const [d, m, y] = datePart.split('-');
-            departureDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-        } else {
-            throw new Error('Invalid date format');
-        }
+        departureDate = regexDate(datePart)
 
         console.log('Departure date:', departureDate);
         // === 3. Parse passengers ===
-        const [adultsStr = '1', childrenStr = '0', infantsStr = '0'] = (ps || '1.0.0').split('.');
-        const adults = Math.max(1, parseInt(adultsStr, 10) || 1);
-        const children = parseInt(childrenStr, 10) || 0;
-        const infants = parseInt(infantsStr, 10) || 0;
+        const { adults, children, infants } = VaildPassenger(ps)
         const totalPax = adults + children;
 
         // === 4. Normalize seat class ===
-        const seatClassMap = {
-            'ECONOMY': 'Economy',
-            'BUSINESS': 'Business',
-            'FIRST': 'First',
-            'PREMIUM': 'Premium Economy',
-            'PREMIUM_ECONOMY': 'Premium Economy'
-        };
-        const normalizedSeatClass = sc ? seatClassMap[sc.toUpperCase().replace(' ', '_')] || null : null;
-
+        const normalizedSeatClass = normalizeSeatClass(sc)
         // === 5. Lấy dữ liệu từ DB ===
         const schedules = await FlightSearchRepository.fullSearch({
             depCode,
@@ -62,107 +47,73 @@ class FlightSearchService {
             ps: totalPax,
             seatClassCode: normalizedSeatClass
         });
-
-        // // === 6. Format kết quả chuẩn OTA ===
-        // const results = schedules
-        //     .map(schedule => {
-        //         try {
-        //             const flight = schedule.flight;
-        //             const airline = flight?.airline;
-        //             const dep = flight?.departureAirport;
-        //             const arr = flight?.arrivalAirport;
-        //             const airplane = schedule.airplane;
-
-        //             if (!flight || !airline || !dep || !arr) return null;
-
-        //             const depTime = new Date(schedule.departure_time);
-        //             const arrTime = new Date(schedule.arrival_time);
-        //             if (isNaN(depTime) || isNaN(arrTime)) return null;
-
-        //             // === Tính duration chính xác (xử lý qua đêm) ===
-        //             let diffMin = Math.round((arrTime - depTime) / 60000);
-        //             if (diffMin < 0) diffMin += 24 * 60;
-        //             const durationH = Math.floor(diffMin / 60);
-        //             const durationM = diffMin % 60;
-
-        //             // === Tìm giá tốt nhất có đủ ghế ===
-        //             let bestFare = null;
-        //             let minPrice = Infinity;
-
-
-        //             const pricePerPax = bestFare ? Math.round(minPrice) : null;
-        //             const totalPrice = pricePerPax ? Math.round(pricePerPax * totalPax) : null;
-
-        //             // === Ghế còn lại (tối đa hiển thị 9) ===
-        //             const availableSeats = schedule.flightFares
-        //                 .filter(f => f.seats_available > 0)
-        //                 .map(f => f.seats_available);
-        //             const seatsLeft = availableSeats.length > 0 ? Math.min(...availableSeats) : 0;
-        //             const displaySeats = seatsLeft >= 9 ? 9 : seatsLeft;
-
-        //             // === Format thời gian theo đúng timezone ===
-        //             const format = (date, tz) => ({
-        //                 time: date.toLocaleTimeString('en-GB', {
-        //                     timeZone: tz || 'Asia/Ho_Chi_Minh',
-        //                     hour: '2-digit',
-        //                     minute: '2-digit'
-        //                 }),
-        //                 date: date.toLocaleDateString('en-CA', {
-        //                     timeZone: tz || 'Asia/Ho_Chi_Minh'
-        //                 })
-        //             });
-
-        //             const depFormatted = format(depTime, dep.timezone);
-        //             const arrFormatted = format(arrTime, arr.timezone);
-
-        //             return {
-        //                 id: schedule.id,
-        //                 flight_number: `${airline.iata_code}${flight.flight_number}`,
-        //                 airline: {
-        //                     name: airline.name,
-        //                     code: airline.iata_code,
-        //                     logo: airline.logo_url || null
-        //                 },
-        //                 departure: {
-        //                     code: dep.iata_code,
-        //                     name: dep.name,
-        //                     city: dep.city,
-        //                     time: depFormatted.time,
-        //                     date: depFormatted.date,
-        //                     timezone: dep.timezone || 'Asia/Ho_Chi_Minh'
-        //                 },
-        //                 arrival: {
-        //                     code: arr.iata_code,
-        //                     name: arr.name,
-        //                     city: arr.city,
-        //                     time: arrFormatted.time,
-        //                     date: arrFormatted.date,        // đúng ngày đến dù qua đêm hay khác múi giờ
-        //                     timezone: arr.timezone || 'Asia/Ho_Chi_Minh'
-        //                 },
-        //                 duration: `${durationH}h${durationM > 0 ? `${durationM}m` : ''}`,
-        //                 aircraft: airplane?.model || flight.aircraft_type || 'Airbus A321',
-        //                 stops: 0,
-        //                 seats_available: displaySeats,
-        //                 price: {
-        //                     currency: 'VND',
-        //                     per_adult: pricePerPax,
-        //                     total: totalPrice,
-        //                     class: bestFare?.seatClass?.class_name || 'Economy'
-        //                 },
-        //                 fares: schedule.flightFares.map(f => ({
-        //                     class_code: f.seatClass?.class_code || 'ECO',
-        //                     class_name: f.seatClass?.class_name || 'Economy',
-        //                     price: Math.round(this.#calculateFareTotal(f)),
-        //                     seats_available: f.seats_available
-        //                 }))
-        //             };
-        //         } catch (err) {
-        //             console.error('Format flight error:', err);
-        //             return null;
-        //         }
-        //     })
-        //     .filter(Boolean);
         return schedules;
+    }
+    static async RoundTripSearch(params) {
+        const { ap, dt, ps, sc } = params;
+
+        // Parse departure airport
+        if (!ap || !ap.includes('.')) throw new Error('Invalid airport format')
+
+        const [depCode, arrCode] = ap.split('.').map(s => s.trim().toUpperCase());
+
+        // Parse departure date and return date
+        if (!dt || !dt.includes('.')) throw new Error('Invalid date format')
+
+        const [departurePart, returnPart] = dt.split('.').map(s => s.trim())
+
+        const departureDate = regexDate(departurePart)
+        const returnDate = regexDate(returnPart)
+
+        console.log('Servie format departureDate: ', departureDate)
+        console.log('Servie format returnDate: ', returnDate)
+
+        // Parse passengers
+
+        const { adults, children, infants } = VaildPassenger(ps)
+
+        const totalPax = adults + children;
+
+        console.log('Adults:', adults)
+        console.log('Children:', children)
+        console.log('Infants:', infants)
+
+        // Parse seat class
+
+        const normalizedSeatClass = normalizeSeatClass(sc)
+
+        console.log('Normalized seat class:', normalizedSeatClass)
+
+        // get data Database
+
+        const outbound = await FlightSearchRepository.fullSearch({
+            depCode,
+            arrCode,
+            date: departureDate,
+            ps: totalPax,
+            seatClassCode: normalizedSeatClass
+        });
+
+        console.log('Outbound:', outbound)
+
+        const inbound = await FlightSearchRepository.fullSearch({
+            depCode: arrCode,
+            arrCode: depCode,
+            date: returnDate,
+            ps: totalPax,
+            seatClassCode: normalizedSeatClass
+        });
+
+        console.log('Inbound:', inbound)
+
+        if (!outbound?.flights?.length || !inbound?.flights?.length) throw new Error('No flights found')
+
+        return {
+            outbound,
+            inbound
+        }
+
+
     }
 }
 

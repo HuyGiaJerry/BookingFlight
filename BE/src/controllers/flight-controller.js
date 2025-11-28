@@ -135,7 +135,7 @@ async function fullSearch(req, res) {
         const { ap, dt, ps, sc } = req.query;
 
 
-        const baseKey = `fullsearch:${ap}:${dt}:${ps}:${sc}`;
+        const baseKey = `fullsearch:oneway:${ap}:${dt}:${ps}:${sc}`;
         console.log("PING:", await redisClient.ping());
         console.log("Check BEFORE GET:");
         console.log("TTL before get:", await redisClient.ttl(baseKey));
@@ -191,6 +191,67 @@ async function fullSearch(req, res) {
     }
 }
 
+async function fulltwoSearch(req, res) {
+    try {
+        const { ap, dt, ps, sc } = req.query;
+
+        const baseKey = `fullsearch:roundtrip:${ap}:${dt}:${ps}:${sc}`;
+        console.log("PING:", await redisClient.ping());
+        console.log("Check BEFORE GET:");
+        console.log("TTL before get:", await redisClient.ttl(baseKey));
+
+        // Check cache
+        let cached = await redisClient.get(baseKey)
+
+
+        if (cached) {
+
+            cached = JSON.parse(cached)
+
+            console.log('cached data:', cached)
+            // Xử lý filter + sort
+            const processed = applyFiltersAndSorting(cached, req.query)
+
+            return res.json({
+                success: true,
+                data: processed,
+                meta: {
+                    total: processed.length,
+                    query: req.query,
+                    timestamp: new Date().toISOString()
+                }
+            })
+        }
+        console.log('callback full search')
+
+        const data = await FlightSearchService.RoundTripSearch(req.query);
+
+        // set cache
+        await redisClient.set(baseKey, JSON.stringify(data), {
+            EX: 600
+        });
+
+        const processed = applyFiltersAndSorting(data, req.query);
+
+        return res.status(200).json({
+            success: true,
+            data: processed,
+            meta: {
+                total: processed.length,
+                query: req.query,
+                timestamp: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('Flight search error:', error);
+        return res.status(400).json({
+            success: false,
+            message: error.message || 'Flight search failed',
+            data: null
+        });
+    }
+}
+
 
 
 module.exports = {
@@ -201,4 +262,5 @@ module.exports = {
     deleteFlight,
     searchFlights,
     fullSearch,
+    fulltwoSearch
 };

@@ -180,7 +180,7 @@ class FlightSearchRepository extends CrudRepository {
 
         const durationMin = formatDuration(bestFlight.flight.duration_minutes)
 
-        console.log('Result: ', formattedResult);
+        // console.log('Result: ', formattedResult);
         return {
             flights: formattedResult,
             airlineData: airlineData,

@@ -10,18 +10,14 @@ const { sequelize } = require('./models');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
-app.use('/api', apiRouter);
-
 const cors = require('cors');
 app.use(cors({
-    origin: '*',
+    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
     credentials: true
 }));
-
+app.use('/api', apiRouter);
 // middleware xử lý lỗi
 app.use(ErrorHandler);
-
 
 
 app.listen(ServerConfig.PORT, async () => {

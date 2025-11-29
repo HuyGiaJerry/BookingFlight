@@ -11,10 +11,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 const cors = require('cors');
+
+const isProduction = process.env.NODE_ENV === 'production';
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
-    credentials: true
+    origin: isProduction 
+        ? process.env.FRONTEND_URL_DEPLOY  // FE deploy (Vercel,...)
+        : process.env.FRONTEND_URL_DEV || "http://localhost:3001",   // FE dev local
+    credentials: true,
+    methods: ["GET","POST","PUT","PATCH","DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
 }));
+// app.use(cors({
+//     origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+//     credentials: true
+// }));
 app.use('/api', apiRouter);
 // middleware xử lý lỗi
 app.use(ErrorHandler);

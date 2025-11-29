@@ -70,45 +70,14 @@ class FlightSelectionService {
             // ✅ Verify update
             await session.reload();
 
-            if (!session.session_data?.flight_selections) {
-                throw new AppError('Failed to save flight selections to session', 500);
-            }
-
-            console.log('✅ Flight selection session created successfully');
-
             return {
                 booking_session_id: sessionId,
-                flight_selections: session.session_data.flight_selections,
-                passengers_count,
+                flight_selection: session.session_data.flight_selection,
                 expires_at: session.expire_at,
-                next_step: 'seat_selection',
-                redirect_url: `/seat-selection?session_id=${sessionId}&passengers=${passengers_count}`
             };
 
         } catch (error) {
             console.error('❌ Error creating flight selection session:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * 📊 Get flight selection session data
-     */
-    async getFlightSelectionSession(sessionId) {
-        try {
-            const sessionData = await SessionManagerService.getUnifiedSessionData(sessionId);
-
-            return {
-                booking_session_id: sessionId,
-                flight_selections: sessionData.flight_selections || {},
-                seat_selections: sessionData.seat_selections || {},
-                service_selections: sessionData.service_selections || {},
-                total_estimate: sessionData.total_estimate,
-                expires_at: sessionData.expires_at
-            };
-
-        } catch (error) {
-            console.error('Error getting flight selection session:', error);
             throw error;
         }
     }

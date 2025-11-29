@@ -7,9 +7,8 @@ class SeatRepository extends CrudRepository {
         super(FlightSeat);
     }
 
-
-    // Get airplane seat layout with availability for specific flight
-    async getFlightSeatMap(flightScheduleId) {
+    // ✅ UPDATED: Get airplane seat layout with class filter
+    async getFlightSeatMap(flightScheduleId, seatClassId = null) {
         try {
             const flightSchedule = await FlightSchedule.findByPk(flightScheduleId, {
                 include: [
@@ -25,9 +24,19 @@ class SeatRepository extends CrudRepository {
                 throw new Error('Flight schedule not found');
             }
 
-            // Get seat layout for this airplane
+            // ✅ Build where condition cho SeatLayout
+            const seatLayoutWhere = {
+                airplane_id: flightSchedule.airplane_id
+            };
+
+            // ✅ THÊM: Filter by seat class nếu có
+            if (seatClassId) {
+                seatLayoutWhere.seat_class_id = seatClassId;
+            }
+
+            // Get seat layout for this airplane (filtered by class if provided)
             const seatLayouts = await SeatLayout.findAll({
-                where: { airplane_id: flightSchedule.airplane_id },
+                where: seatLayoutWhere,
                 include: [
                     {
                         model: SeatClass,
@@ -38,14 +47,28 @@ class SeatRepository extends CrudRepository {
                 order: [['seat_row', 'ASC'], ['seat_column', 'ASC']]
             });
 
-            // Get flight seats status
+            if (seatLayouts.length === 0) {
+                console.log(`No seat layouts found for airplane ${flightSchedule.airplane_id}${seatClassId ? ` and class ${seatClassId}` : ''}`);
+                return {
+                    flight_schedule: flightSchedule,
+                    airplane: flightSchedule.airplane,
+                    seat_map: []
+                };
+            }
+
+            // ✅ Get flight seats status (chỉ lấy những ghế thuộc layout đã filter)
+            const seatLayoutIds = seatLayouts.map(layout => layout.id);
+
             const flightSeats = await FlightSeat.findAll({
-                where: { flight_schedule_id: flightScheduleId },
+                where: {
+                    flight_schedule_id: flightScheduleId,
+                    seat_layout_id: { [Op.in]: seatLayoutIds } // ✅ QUAN TRỌNG: Chỉ lấy seat thuộc layout đã filter
+                },
                 include: [
                     {
                         model: SeatLayout,
                         as: 'seatLayout',
-                        attributes: ['seat_number', 'seat_row', 'seat_column']
+                        attributes: ['seat_number', 'seat_row', 'seat_column', 'seat_class_id']
                     }
                 ]
             });
@@ -77,6 +100,104 @@ class SeatRepository extends CrudRepository {
             };
         } catch (error) {
             console.error('Error getting flight seat map:', error);
+            throw error;
+        }
+    }
+
+    // ✅ NEW: Get seats by specific class only
+    async getFlightSeatsByClass(flightScheduleId, seatClassId) {
+        try {
+            return await this.getFlightSeatMap(flightScheduleId, seatClassId);
+        } catch (error) {
+            console.error('Error getting seats by class:', error);
+            throw error;
+        }
+    }
+
+    // ✅ UPDATED: Get available seats for specific class (tối ưu hơn)
+    async getAvailableSeatsForClass(flightScheduleId, seatClassId) {
+        try {
+            return await FlightSeat.findAll({
+                where: {
+                    flight_schedule_id: flightScheduleId,
+                    status: 'available'
+                },
+                include: [
+                    {
+                        model: SeatLayout,
+                        as: 'seatLayout',
+                        where: { seat_class_id: seatClassId }, // ✅ Filter by class
+                        include: [
+                            {
+                                model: SeatClass,
+                                as: 'seatClass',
+                                attributes: ['class_name', 'class_code']
+                            }
+                        ]
+                    }
+                ],
+                order: [
+                    [{ model: SeatLayout, as: 'seatLayout' }, 'seat_row', 'ASC'],
+                    [{ model: SeatLayout, as: 'seatLayout' }, 'seat_column', 'ASC']
+                ]
+            });
+        } catch (error) {
+            console.error('Error getting available seats for class:', error);
+            throw error;
+        }
+    }
+
+    // ✅ NEW: Get seat count summary by class for a flight
+    async getSeatCountByClass(flightScheduleId) {
+        try {
+            const result = await FlightSeat.findAll({
+                attributes: [
+                    [Sequelize.literal('seatLayout.seat_class_id'), 'class_id'],
+                    [Sequelize.literal('seatClass.class_name'), 'class_name'],
+                    [Sequelize.literal('seatClass.class_code'), 'class_code'],
+                    [Sequelize.fn('COUNT', Sequelize.col('FlightSeat.id')), 'total_seats'],
+                    [Sequelize.fn('SUM',
+                        Sequelize.literal('CASE WHEN status = "available" THEN 1 ELSE 0 END')
+                    ), 'available_seats'],
+                    [Sequelize.fn('SUM',
+                        Sequelize.literal('CASE WHEN status = "booked" THEN 1 ELSE 0 END')
+                    ), 'booked_seats']
+                ],
+                where: {
+                    flight_schedule_id: flightScheduleId
+                },
+                include: [
+                    {
+                        model: SeatLayout,
+                        as: 'seatLayout',
+                        attributes: [],
+                        include: [
+                            {
+                                model: SeatClass,
+                                as: 'seatClass',
+                                attributes: []
+                            }
+                        ]
+                    }
+                ],
+                group: [
+                    'seatLayout.seat_class_id',
+                    'seatClass.class_name',
+                    'seatClass.class_code'
+                ],
+                raw: true
+            });
+
+            return result.map(row => ({
+                class_id: row.class_id,
+                class_name: row.class_name,
+                class_code: row.class_code,
+                total_seats: parseInt(row.total_seats),
+                available_seats: parseInt(row.available_seats),
+                booked_seats: parseInt(row.booked_seats)
+            }));
+        } catch (error) {
+            console.error('Error getting seat count by class:', error);
             throw error;
         }
     }
@@ -179,19 +300,16 @@ class SeatRepository extends CrudRepository {
     }
 
 
-    // Get available seats for specific class
-    async getAvailableSeatsForClass(flightScheduleId, seatClassId) {
+    // Check seat availability
+    async checkSeatAvailability(seatIds) {
         try {
-            return await FlightSeat.findAll({
-                where: {
-                    flight_schedule_id: flightScheduleId,
-                    status: 'available'
-                },
+            const seats = await FlightSeat.findAll({
+                where: { id: { [Op.in]: seatIds } },
                 include: [
                     {
                         model: SeatLayout,
                         as: 'seatLayout',
-                        where: { seat_class_id: seatClassId },
+                        attributes: ['seat_number', 'seat_class_id'],
                         include: [
                             {
                                 model: SeatClass,
@@ -202,29 +320,11 @@ class SeatRepository extends CrudRepository {
                     }
                 ]
             });
-        } catch (error) {
-            console.error('Error getting available seats for class:', error);
-            throw error;
-        }
-    }
-
-    // Check seat availability
-    async checkSeatAvailability(seatIds) {
-        try {
-            const seats = await FlightSeat.findAll({
-                where: { id: { [Op.in]: seatIds } },
-                include: [
-                    {
-                        model: SeatLayout,
-                        as: 'seatLayout',
-                        attributes: ['seat_number']
-                    }
-                ]
-            });
 
             return seats.map(seat => ({
                 seat_id: seat.id,
                 seat_number: seat.seatLayout.seat_number,
+                seat_class: seat.seatLayout.seatClass,
                 status: seat.status,
                 is_available: seat.status === 'available',
                 is_blocked: seat.status === 'blocked' &&

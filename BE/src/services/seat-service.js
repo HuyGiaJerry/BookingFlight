@@ -9,31 +9,34 @@ class SeatService {
     }
 
     /**
-     * ✅ NEW: Get Traveloka-style seat matrix với pricing colors
-     * 🎯 Màu sắc dựa vào price_adjustment, không phải status
+     * ✅ UPDATED: Get Traveloka seat matrix với class filter
      */
-    async getTravelokaSeatMatrix(flightScheduleId) {
+    async getTravelokaSeatMatrix(flightScheduleId, seatClassId = null) {
         try {
-            console.log('🚀 Getting Traveloka seat matrix for flight:', flightScheduleId);
+            console.log('🚀 Getting Traveloka seat matrix for flight:', flightScheduleId, 'class:', seatClassId);
 
-            const seatMapData = await this.seatRepository.getFlightSeatMap(flightScheduleId);
+            const seatMapData = await this.seatRepository.getFlightSeatMap(flightScheduleId, seatClassId);
 
-            if (!seatMapData || !seatMapData.seat_map) {
+            if (!seatMapData || !seatMapData.seat_map || seatMapData.seat_map.length === 0) {
                 return {
                     flight_schedule_id: flightScheduleId,
-                    error: 'No seat data available'
+                    seat_class_id: seatClassId,
+                    error: `No seat data available${seatClassId ? ' for this class' : ''}`
                 };
             }
 
             const { seat_map, airplane } = seatMapData;
 
-            // ✅ Get base prices từ FlightFare
-            const basePrices = await this.getBasePricesFromFlightFare(flightScheduleId);
+            // ✅ Get base prices từ FlightFare (filter by class nếu có)
+            const basePrices = await this.getBasePricesFromFlightFare(flightScheduleId, seatClassId);
 
             // ✅ Build enhanced seat data với full pricing
             const enhancedSeatMap = this.buildEnhancedSeatMap(seat_map, basePrices);
 
-            // ✅ Build pricing-based matrix (F=Free, L=Low, P=Premium, X=Unavailable, B=Booked)
+            // ✅ DEBUG: Add layout debugging
+            const debugInfo = this.debugSeatLayout(enhancedSeatMap);
+
+            // ✅ Build pricing-based matrix 
             const matrixData = this.buildPricingMatrix(enhancedSeatMap);
 
             // ✅ Build seat mappings
@@ -42,20 +45,31 @@ class SeatService {
 
             return {
                 flight_schedule_id: flightScheduleId,
+                seat_class_id: seatClassId,
                 aircraft: {
                     model: airplane?.model || 'Unknown',
                     total_seats: enhancedSeatMap.length
                 },
 
+                // ✅ CLASS INFO (nếu filter by class)
+                class_info: seatClassId ? {
+                    class_id: seatClassId,
+                    class_code: enhancedSeatMap[0]?.seat_class?.class_code,
+                    class_name: enhancedSeatMap[0]?.seat_class?.class_name
+                } : null,
+
                 // ✅ CORE: Pricing-based seat matrix
                 seats: {
-                    data: matrixData.rows,           // ["FLP|XBF"] - tiers based on price
-                    layout: matrixData.layout_pattern // "ABC|DEF"
+                    data: matrixData.rows,           // ["PB|--"] -> ["PB|XP"]
+                    layout: matrixData.layout_pattern // "AD|GK" -> "AC|DF"
                 },
 
                 // ✅ SEAT SELECTION DATA
-                seatIds: seatIds,                    // {"1A": 28641} - for booking
+                seatIds: seatIds,                    // {"1A": 28641}
                 seatPricing: seatPricing,            // {"1A": {adjustment: 8.91, tier: "L"}}
+
+                // ✅ DEBUG INFO (remove in production)
+                debug: debugInfo,
 
                 // ✅ LEGEND for frontend colors
                 legend: {
@@ -79,21 +93,29 @@ class SeatService {
             console.error('❌ Error getting Traveloka seat matrix:', error);
             return {
                 flight_schedule_id: flightScheduleId,
+                seat_class_id: seatClassId,
                 error: error.message
             };
         }
     }
 
     /**
-     * ✅ Get base prices từ FlightFare table
+     * ✅ UPDATED: Get base prices với class filter
      */
-    async getBasePricesFromFlightFare(flightScheduleId) {
+    async getBasePricesFromFlightFare(flightScheduleId, seatClassId = null) {
         try {
+            const whereCondition = {
+                flight_schedule_id: flightScheduleId,
+                status: 'available'
+            };
+
+            // ✅ THÊM: Filter by seat class nếu có
+            if (seatClassId) {
+                whereCondition.seat_class_id = seatClassId;
+            }
+
             const flightFares = await FlightFare.findAll({
-                where: {
-                    flight_schedule_id: flightScheduleId,
-                    status: 'available'
-                },
+                where: whereCondition,
                 include: [
                     {
                         model: require('../models').SeatClass,
@@ -123,6 +145,30 @@ class SeatService {
     }
 
     /**
+     * ✅ NEW: Get seat count summary by class
+     */
+    async getSeatClassSummary(flightScheduleId) {
+        try {
+            return await this.seatRepository.getSeatCountByClass(flightScheduleId);
+        } catch (error) {
+            console.error('Error getting seat class summary:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * ✅ NEW: Get seats for specific class only
+     */
+    async getSeatsByClass(flightScheduleId, seatClassId) {
+        try {
+            return await this.getTravelokaSeatMatrix(flightScheduleId, seatClassId);
+        } catch (error) {
+            console.error('Error getting seats by class:', error);
+            throw error;
+        }
+    }
+
+    /**
      * ✅ Build enhanced seat map với full pricing info
      */
     buildEnhancedSeatMap(seatMap, basePrices) {
@@ -131,9 +177,8 @@ class SeatService {
 
             return {
                 ...seat,
-                display_price: adjustment,           // ✅ CHỈ adjustment cho UI
-                seat_surcharge: adjustment,          // ✅ Phí ghế 
-                // ❌ XÓA: base_price, final_price
+                display_price: adjustment,
+                seat_surcharge: adjustment,
                 pricing_tier: this.calculatePricingTier(seat.status, adjustment)
             };
         });
@@ -155,7 +200,7 @@ class SeatService {
     }
 
     /**
-     * ✅ Build pricing matrix cho frontend rendering
+     * ✅ FIXED: Build pricing matrix với better error handling
      */
     buildPricingMatrix(enhancedSeatMap) {
         const rowsData = {};
@@ -168,15 +213,18 @@ class SeatService {
             rowsData[row][seat.seat_column] = seat.pricing_tier;
         });
 
-        // Build layout pattern
+        // ✅ Get actual columns from seat data
         const allColumns = new Set();
         Object.values(rowsData).forEach(rowData => {
             Object.keys(rowData).forEach(col => allColumns.add(col));
         });
         const columns = Array.from(allColumns).sort();
+
+        console.log(`🔍 DEBUG: Building matrix with columns: [${columns.join(', ')}]`);
+
         const layoutPattern = this.determineLayoutPattern(columns);
 
-        // Build matrix rows
+        // ✅ Build matrix rows - ensure all pattern characters are handled
         const sortedRows = Object.keys(rowsData).sort((a, b) => parseInt(a) - parseInt(b));
         const matrixRows = [];
 
@@ -184,15 +232,24 @@ class SeatService {
             const rowData = rowsData[rowNum];
             let rowString = '';
 
+            // ✅ FIXED: Process each character in layout pattern
             layoutPattern.split('').forEach(char => {
                 if (char === '|') {
                     rowString += '|';
                 } else {
-                    rowString += rowData[char] || '-';
+                    // ✅ Check if this column exists in actual data
+                    const seatValue = rowData[char];
+                    if (seatValue !== undefined) {
+                        rowString += seatValue;
+                    } else {
+                        console.log(`⚠️ WARNING: Column '${char}' not found in row ${rowNum}, available: [${Object.keys(rowData).join(', ')}]`);
+                        rowString += '-'; // Missing seat
+                    }
                 }
             });
 
             matrixRows.push(rowString);
+            console.log(`📋 Row ${rowNum}: "${rowString}" (pattern: "${layoutPattern}")`);
         });
 
         return {
@@ -249,28 +306,103 @@ class SeatService {
         return features;
     }
 
+    /**
+     * ✅ FIXED: Determine layout pattern dựa trên actual columns
+     */
     determineLayoutPattern(columns) {
         const columnCount = columns.length;
+        const sortedColumns = [...columns].sort(); // ✅ Sort actual columns
+
+        console.log(`🔍 DEBUG: Columns found: [${sortedColumns.join(', ')}], Count: ${columnCount}`);
+
+        // ✅ FIXED: Handle specific column combinations
+        if (columnCount === 4) {
+            // First Class hoặc Business có thể có: A,C,D,F hoặc A,D,G,K
+            if (sortedColumns.join('') === 'ACDF') {
+                return 'AC|DF'; // First Class: A,C | D,F
+            } else if (sortedColumns.join('') === 'ADGK') {
+                return 'AD|GK'; // Business: A,D | G,K  
+            }
+            // Fallback cho 4 cột khác
+            return sortedColumns.slice(0, 2).join('') + '|' + sortedColumns.slice(2).join('');
+        }
 
         if (columnCount === 6) {
             const hasB = columns.includes('B');
             const hasE = columns.includes('E');
 
             if (!hasB && !hasE) {
-                return 'AC|DF'; // Business: A,C,D,F
+                // Business class: A,C,D,F (6 cột nhưng không có B,E)
+                return 'AC|DF'; // Nhưng này chỉ 4 cột, cần xử lý khác
             } else if (hasB && hasE) {
                 return 'ABC|DEF'; // Economy: A,B,C,D,E,F
             }
         }
 
+        if (columnCount === 2) {
+            // First class 2 cột
+            return sortedColumns.join('|'); // A|F
+        }
+
+        // ✅ GENERAL: Dynamic layout based on actual columns
         const layoutPatterns = {
-            3: 'ABC',
-            4: 'ABCD',
-            6: 'ABC|DEF',
-            8: 'ABCD|EFGH'
+            2: () => sortedColumns.join('|'),     // A|F
+            3: () => sortedColumns.join(''),      // ABC
+            4: () => sortedColumns.slice(0, 2).join('') + '|' + sortedColumns.slice(2).join(''), // AC|DF
+            6: () => sortedColumns.slice(0, 3).join('') + '|' + sortedColumns.slice(3).join(''), // ABC|DEF
+            7: () => sortedColumns.slice(0, 3).join('') + '|' + sortedColumns.slice(3).join(''), // ABC|DEFG
+            8: () => sortedColumns.slice(0, 4).join('') + '|' + sortedColumns.slice(4).join(''), // ABCD|EFGH
+            9: () => sortedColumns.slice(0, 3).join('') + '|' + sortedColumns.slice(3, 6).join('') + '|' + sortedColumns.slice(6).join('')
         };
 
-        return layoutPatterns[columnCount] || columns.join('');
+        const patternFunc = layoutPatterns[columnCount];
+        if (patternFunc) {
+            const pattern = patternFunc();
+            console.log(`✅ Generated pattern: "${pattern}" for columns: [${sortedColumns.join(', ')}]`);
+            return pattern;
+        }
+
+        // ✅ FALLBACK: Join all columns
+        const fallbackPattern = sortedColumns.join('');
+        console.log(`⚠️ Fallback pattern: "${fallbackPattern}" for columns: [${sortedColumns.join(', ')}]`);
+        return fallbackPattern;
+    }
+
+    /**
+     * ✅ NEW: Debug seat layout issues
+     */
+    debugSeatLayout(enhancedSeatMap) {
+        console.log('\n🔧 SEAT LAYOUT DEBUG:');
+
+        // Group by row
+        const rowsData = {};
+        enhancedSeatMap.forEach(seat => {
+            const row = seat.seat_row;
+            if (!rowsData[row]) rowsData[row] = [];
+            rowsData[row].push({
+                col: seat.seat_column,
+                seat: seat.seat_number,
+                tier: seat.pricing_tier
+            });
+        });
+
+        // Show each row
+        Object.keys(rowsData).sort((a, b) => parseInt(a) - parseInt(b)).forEach(row => {
+            const seats = rowsData[row].sort((a, b) => a.col.localeCompare(b.col));
+            const columns = seats.map(s => s.col).join(',');
+            const tiers = seats.map(s => s.tier).join('');
+            console.log(`Row ${row}: [${columns}] -> "${tiers}"`);
+        });
+
+        // Show available columns
+        const allColumns = [...new Set(enhancedSeatMap.map(s => s.seat_column))].sort();
+        console.log(`All columns: [${allColumns.join(', ')}]`);
+
+        return {
+            rows_data: rowsData,
+            all_columns: allColumns,
+            seat_count: enhancedSeatMap.length
+        };
     }
 
     // ✅ KEEP: Existing methods for backward compatibility
@@ -282,12 +414,9 @@ class SeatService {
     async getFlightSeatMapWithPricing(flightScheduleId, seatClassId = null) {
         // Keep for admin/detailed view
         try {
-            const seatMapData = await this.seatRepository.getFlightSeatMap(flightScheduleId);
+            const seatMapData = await this.seatRepository.getFlightSeatMap(flightScheduleId, seatClassId);
 
             let seatMap = seatMapData.seat_map;
-            if (seatClassId) {
-                seatMap = seatMap.filter(seat => seat.seat_class.id === seatClassId);
-            }
 
             const seatsByClass = this.groupSeatsByClass(seatMap);
             const seatLayout = this.generateSeatLayout(seatMap);
@@ -295,6 +424,7 @@ class SeatService {
             return {
                 flight_info: {
                     flight_schedule_id: flightScheduleId,
+                    seat_class_id: seatClassId,
                     airplane: seatMapData.airplane
                 },
                 seat_classes: seatsByClass,
@@ -308,9 +438,41 @@ class SeatService {
         }
     }
 
-    // ✅ REMOVED: Old helper methods that are no longer needed
-    // - buildClassMap(), buildFeaturesMap(), buildBlockedMap(), buildBookedList()
-    // - buildPriceMapFromDB() (replaced with getBasePricesFromFlightFare())
+    groupSeatsByClass(seatMap) {
+        const grouped = {};
+
+        seatMap.forEach(seat => {
+            const classId = seat.seat_class.id;
+            if (!grouped[classId]) {
+                grouped[classId] = {
+                    class_info: seat.seat_class,
+                    seats: []
+                };
+            }
+            grouped[classId].seats.push(seat);
+        });
+
+        return grouped;
+    }
+
+    generateSeatLayout(seatMap) {
+        const layout = {};
+
+        seatMap.forEach(seat => {
+            const row = seat.seat_row;
+            if (!layout[row]) {
+                layout[row] = {};
+            }
+            layout[row][seat.seat_column] = {
+                seat_number: seat.seat_number,
+                status: seat.status,
+                price_adjustment: seat.price_adjustment,
+                seat_class: seat.seat_class
+            };
+        });
+
+        return layout;
+    }
 }
 
 module.exports = SeatService;

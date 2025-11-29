@@ -3,6 +3,8 @@ const bcrypt = require('bcrypt');
 const TokenService = require('./token-service');
 const AppError = require('../utils/errors/app-error');
 const { StatusCodes } = require('http-status-codes');
+const axios = require('axios');
+
 class UserService {
     constructor({ userRepo, sessionRepo }) {
         this.userRepository = userRepo || new UserRepository();
@@ -84,6 +86,7 @@ class UserService {
             if (!email || !password) {
                 throw new Error('Thiếu thông tin đăng nhập !');
             }
+
             // so sánh hashed pass với pass input
             const user = await this.userRepository.findByEmail(email);
             if (!user) {

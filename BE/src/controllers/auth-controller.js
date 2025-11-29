@@ -139,7 +139,7 @@ async function signUp(req, res) {
     }
 };
 
-async function signIn(req, res) {
+async function signIn(req, res,next) {
     try {
         console.log('req body:', req.body)
         const { email, password } = req.body;
@@ -192,10 +192,7 @@ async function signIn(req, res) {
         }));
 
     } catch (error) {
-        console.error('Error sign in :', error);
-        return res
-            .status(StatusCodes.INTERNAL_SERVER_ERROR)
-            .json(responses.ErrorResponse(error));
+        next(error);
     }
 };
 

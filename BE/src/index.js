@@ -14,17 +14,63 @@ const cors = require('cors');
 
 // const isProduction = process.env.NODE_ENV === 'production';
 // app.use(cors({
-//     origin: isProduction 
+//     origin: isProduction
 //         ? process.env.FRONTEND_URL_DEPLOY  // FE deploy (Vercel,...)
 //         : process.env.FRONTEND_URL_DEV || "http://localhost:3001",   // FE dev local
 //     credentials: true,
-//     methods: ["GET","POST","PUT","PATCH","DELETE"],
+//     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
 //     allowedHeaders: ["Content-Type", "Authorization"],
 // }));
-app.use(cors({
-    origin: process.env.FRONTEND_URL_DEV || 'http://localhost:3001',
-    credentials: true
-}));
+// app.use(cors({
+//     origin: process.env.FRONTEND_URL_DEV || 'http://localhost:3001',
+//     credentials: true
+// }));
+
+
+// const allowedOrigins = [
+//     process.env.FRONTEND_URL,
+//     "http://localhost:5173",
+// ].filter(Boolean) as string[];
+
+// // CORS — FIX QUAN TRỌNG
+// app.use(
+//     cors({
+//         origin: (origin, callback) => {
+//             if (!origin) return callback(null, true);
+
+//             if (allowedOrigins.includes(origin)) {
+//                 return callback(null, true);
+//             }
+
+//             console.log("❌ Blocked by CORS:", origin);
+//             return callback(new Error("Not allowed by CORS"));
+//         },
+//         credentials: true,
+//     })
+// );
+
+const allowedOrigins = [
+    process.env.FRONTEND_URL_DEV?.trim(),
+    process.env.FRONTEND_URL_DEPLOY?.trim(),
+    "http://localhost:3001"
+].filter(Boolean);
+
+// CORS — FIX QUAN TRỌNG
+app.use(
+    cors({
+        origin: (origin, callback) => {
+            if (!origin) return callback(null, true);
+
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+
+            console.log("❌ Blocked by CORS:", origin);
+            return callback(new Error("Not allowed by CORS"));
+        },
+        credentials: true,
+    })
+);
 app.use('/api', apiRouter);
 // middleware xử lý lỗi
 app.use(ErrorHandler);
@@ -75,5 +121,5 @@ process.on('uncaughtException', (error) => {
         global.seatCleanupService.stopAutoCleanup();
     }
     process.exit(1);
-    
+
 });

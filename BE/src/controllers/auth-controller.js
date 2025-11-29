@@ -228,17 +228,17 @@ async function verifyOtp(req, res) {
             account_id: user.id
         });
 
-        // 5. Set refreshToken cookie
+        // 5. Set refreshToken cookie with proper configuration
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            maxAge: 7 * 24 * 60 * 60 * 1000
+            secure: process.env.NODE_ENV === 'production', // Only secure in production
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Let browser handle
         });
 
         // 6. Return access token
         return res.status(StatusCodes.OK).json(responses.SuccessResponse({
-
             accessToken
         }));
 

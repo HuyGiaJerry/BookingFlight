@@ -45,6 +45,16 @@ const signUpSchema = Joi.object({
             "string.pattern.base":
                 "Mật khẩu phải gồm chữ hoa, chữ thường, số và ký tự đặc biệt",
             "any.required": "Mật khẩu là bắt buộc"
+        }),
+    address: Joi.string()
+        .min(5)
+        .max(255)
+        .required()
+        .messages({
+            "string.empty": "Địa chỉ không được để trống",
+            "string.min": "Địa chỉ phải có ít nhất 5 ký tự",
+            "string.max": "Địa chỉ không được vượt quá 255 ký tự",
+            "any.required": "Địa chỉ là bắt buộc"
         })
 });
 

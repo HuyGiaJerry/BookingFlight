@@ -38,55 +38,54 @@ async function signUp(req, res) {
 async function signIn(req, res) {
     try {
         console.log('req body:', req.body)
+        const { email, password } = req.body;
+
+        // B1: Check email/password
+        const user = await userService.signIn({ email, password });
+
+        if (!user) {
+            return res
+                .status(StatusCodes.UNAUTHORIZED)
+                .json(responses.ErrorResponse('Email hoặc mật khẩu không đúng.'));
+        }
         // const { accessToken, refreshToken } = await userService.signIn(req.body);
-        // const { captchaToken } = req.body;
-        // console.log('Captcha Token:', captchaToken);
+        const { captchaToken } = req.body;
+        console.log('Captcha Token:', captchaToken);
 
-        // if (!captchaToken) {
-        //     return res
-        //         .status(StatusCodes.BAD_REQUEST)
-        //         .json({ error: 'Captcha missing' });
-        // }
+        if (!captchaToken) {
+            return res
+                .status(StatusCodes.BAD_REQUEST)
+                .json({ error: 'Captcha missing' });
+        }
 
-        // const data = await userService.verifyCaptcha(captchaToken);
+        const data = await userService.verifyCaptcha(captchaToken);
 
-        // if (!data.success) {
-        //     return res
-        //         .status(StatusCodes.BAD_REQUEST)
-        //         .json({ error: 'Captcha invalid' });
-        // }
-
+        if (!data.success) {
+            return res
+                .status(StatusCodes.BAD_REQUEST)
+                .json({ error: 'Captcha invalid' });
+        }
+        console.log('user:', user)
         // generate otp
         const otp = otpService.generateOTP();
 
-        // save otp redis
+        // // save otp redis
         await otpService.saveOTP(req.body.email, otp);
 
-        // send otp to email
+        // // send otp to email
         const to = req.body.email
         const subject = 'Verify your email - Trevoloka!'
         const html = `<h1>Verify your email</h1><p>Your OTP is: ${otp}</p>
         <p>OTP will expire in 5 minutes</p>`
 
         const sentEmailResponse = await resendProvider.sendEmail(to, subject, html)
-        console.log('sentEmailResponse:', sentEmailResponse)
+        // console.log('sentEmailResponse:', sentEmailResponse)
 
         return res.status(StatusCodes.OK).json(responses.SuccessResponse({
             message: 'OTP sent email',
             email: req.body.email
         }));
 
-        // res.cookie('refreshToken', refreshToken, {
-        //     httpOnly: true,
-        //     secure: true,
-        //     sameSite: 'none',
-        //     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        // });
-        // // Lưu refresh token vào db
-
-        // return res
-        //     .status(StatusCodes.OK)
-        //     .json({ accessToken });
     } catch (error) {
         console.error('Error sign in :', error);
         return res
@@ -94,6 +93,7 @@ async function signIn(req, res) {
             .json(responses.ErrorResponse(error));
     }
 };
+
 
 // sync function signIn(req, res) {
 //     try {

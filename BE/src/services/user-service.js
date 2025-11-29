@@ -81,6 +81,7 @@ class UserService {
 
 
     async signIn(data, options = {}) {
+        console.log('signin in run')
         try {
 
             const { email, password } = data;
@@ -89,13 +90,13 @@ class UserService {
             }
 
             // so sánh hashed pass với pass input
-            const user = await this.userRepository.findByEmail(email);
+            const user = await this.userRepository.findWithPassword(email);
             if (!user) {
                 throw new Error('User or password không đúng !');
             }
             const passwordMatch = await bcrypt.compare(password, user.password);
             if (!passwordMatch) {
-                throw new Error('User or password không đúng !');
+                return null;
             }
             // // nếu khớp tạo access token
             // const accessToken = TokenService.createAccessToken({ userId: user.id });
@@ -108,7 +109,7 @@ class UserService {
             //     expire_at: expiresAt,
             //     account_id: user.id
             // })
-            delete user.password;
+            console.log(' service user: ', user)
             return user;
 
         } catch (error) {
@@ -156,6 +157,9 @@ class UserService {
             throw new AppError('Internal Server Error', StatusCodes.INTERNAL_SERVER_ERROR);
         }
     }
+
+
+
 
 
     async updateUser(id, data) {

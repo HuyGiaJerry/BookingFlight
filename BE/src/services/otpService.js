@@ -5,18 +5,21 @@ function generateOTP() {
 }
 
 async function saveOTP(email, otp) {
-    const key = `otp:login:${email}`;
-    await redis.set(key, otp, "EX", 300);
+    const key = `otp:${email}`;
+
+    await redis.del(key);
+
+    await redis.set(key, otp, "EX", 60 * 5);
 }
 
 async function verifyOTP(email, otp) {
-    const key = `otp:login:${email}`;
+    const key = `otp:${email}`;
     const stored = await redis.get(key);
     return stored === otp;
 }
 
 async function deleteOTP(email) {
-    const key = `otp:login:${email}`;
+    const key = `otp:${email}`;
     await redis.del(key);
 }
 

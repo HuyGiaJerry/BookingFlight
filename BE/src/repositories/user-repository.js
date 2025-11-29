@@ -59,7 +59,9 @@ class UserRepository extends CrudRepository {
       throw error;
     }
   }
-
+  findWithPassword(email) {
+    return Account.findOne({ where: { email } });
+  }
 }
 
 module.exports = UserRepository;

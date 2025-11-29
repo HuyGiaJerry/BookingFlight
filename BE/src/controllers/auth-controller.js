@@ -229,12 +229,18 @@ async function verifyOtp(req, res) {
         });
 
         // 5. Set refreshToken cookie with proper configuration
-        res.cookie('refreshToken', refreshToken, {
+        // res.cookie('refreshToken', refreshToken, {
+        //     httpOnly: true,
+        //     secure: process.env.NODE_ENV === 'production', // Only secure in production
+        //     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        //     maxAge: 7 * 24 * 60 * 60 * 1000,
+        //     domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Let browser handle
+        // });
+        res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // Only secure in production
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            secure: false,       // dev dùng http
+            sameSite: "none",    // bắt buộc vì FE và BE khác domain/port
             maxAge: 7 * 24 * 60 * 60 * 1000,
-            domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Let browser handle
         });
 
         // 6. Return access token

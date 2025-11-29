@@ -5,10 +5,115 @@ const { Session } = require('../models')
 const resendProvider = require('../providers/resendProvider');
 const otpService = require('../services/otpService');
 const responses = require('../utils/common/responses');
+
 const userService = new UserService({
     userRepo: new UserRepository(),
     sessionRepo: new SessionRepository()
 });
+
+// ✅ CHỨC NĂNG: Lấy thông tin chi tiết account + role + permissions
+// REQUEST: GET /api/v1/auth/account-details
+// HEADER: Authorization: Bearer <token>
+// RESPONSE: Account info + role + permissions
+async function getAccountDetails(req, res) {
+    try {
+        // Lấy token từ header
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(StatusCodes.UNAUTHORIZED).json(
+                responses.ErrorResponse('Authorization header is required')
+            );
+        }
+
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+
+        // Gọi service để lấy account details
+        const accountDetails = await userService.getAccountDetailsWithRolePermissions(token);
+
+        return res.status(StatusCodes.OK).json(
+            responses.SuccessResponse(accountDetails)
+        );
+
+    } catch (error) {
+        console.error('Error getting account details:', error);
+
+        const statusCode = error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
+        return res.status(statusCode).json(
+            responses.ErrorResponse(error.message || 'Failed to get account details')
+        );
+    }
+}
+
+// ✅ CHỨC NĂNG: Lấy profile user (thông tin cơ bản)
+// REQUEST: GET /api/v1/auth/profile
+// HEADER: Authorization: Bearer <token>
+// RESPONSE: Basic profile info
+async function getUserProfile(req, res) {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(StatusCodes.UNAUTHORIZED).json(
+                responses.ErrorResponse('Authorization header is required')
+            );
+        }
+
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        const profile = await userService.getUserProfile(token);
+
+        return res.status(StatusCodes.OK).json(
+            responses.SuccessResponse(profile)
+        );
+
+    } catch (error) {
+        console.error('Error getting user profile:', error);
+
+        const statusCode = error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
+        return res.status(statusCode).json(
+            responses.ErrorResponse(error.message || 'Failed to get user profile')
+        );
+    }
+}
+
+// ✅ CHỨC NĂNG: Kiểm tra permission của user
+// REQUEST: POST /api/v1/auth/check-permission
+// HEADER: Authorization: Bearer <token>
+// BODY: {"permission": "read_users"}
+// RESPONSE: {hasPermission: true/false, userRole, permissions[]}
+async function checkPermission(req, res) {
+    try {
+        const authHeader = req.headers.authorization;
+        const { permission } = req.body;
+
+        if (!authHeader) {
+            return res.status(StatusCodes.UNAUTHORIZED).json(
+                responses.ErrorResponse('Authorization header is required')
+            );
+        }
+
+        if (!permission) {
+            return res.status(StatusCodes.BAD_REQUEST).json(
+                responses.ErrorResponse('Permission is required')
+            );
+        }
+
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        const result = await userService.checkUserPermission(token, permission);
+
+        return res.status(StatusCodes.OK).json(
+            responses.SuccessResponse(result)
+        );
+
+    } catch (error) {
+        console.error('Error checking permission:', error);
+
+        const statusCode = error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
+        return res.status(statusCode).json(
+            responses.ErrorResponse(error.message || 'Failed to check permission')
+        );
+    }
+}
+
+// ✅ EXISTING FUNCTIONS - giữ nguyên...
 
 async function signUp(req, res) {
     console.log('req.body:', req.body)
@@ -34,13 +139,12 @@ async function signUp(req, res) {
     }
 };
 
-
 async function signIn(req, res) {
     try {
         console.log('req body:', req.body)
         const { email, password } = req.body;
 
-        // B1: Check email/password
+        // Check email/password
         const user = await userService.signIn({ email, password });
 
         if (!user) {
@@ -48,7 +152,7 @@ async function signIn(req, res) {
                 .status(StatusCodes.UNAUTHORIZED)
                 .json(responses.ErrorResponse('Email hoặc mật khẩu không đúng.'));
         }
-        // const { accessToken, refreshToken } = await userService.signIn(req.body);
+
         const { captchaToken } = req.body;
         console.log('Captcha Token:', captchaToken);
 
@@ -65,21 +169,22 @@ async function signIn(req, res) {
                 .status(StatusCodes.BAD_REQUEST)
                 .json({ error: 'Captcha invalid' });
         }
+
         console.log('user:', user)
         // generate otp
         const otp = otpService.generateOTP();
 
-        // // save otp redis
+        // save otp redis
         await otpService.saveOTP(req.body.email, otp);
 
-        // // send otp to email
+        // send otp to email
         const to = req.body.email
         const subject = 'Verify your email - Trevoloka!'
         const html = `<h1>Verify your email</h1><p>Your OTP is: ${otp}</p>
         <p>OTP will expire in 5 minutes</p>`
 
         const sentEmailResponse = await resendProvider.sendEmail(to, subject, html)
-        // console.log('sentEmailResponse:', sentEmailResponse)
+        console.log('sentEmailResponse:', sentEmailResponse)
 
         return res.status(StatusCodes.OK).json(responses.SuccessResponse({
             message: 'OTP sent email',
@@ -141,8 +246,7 @@ async function signIn(req, res) {
 async function signOut(req, res) {
     try {
         const refreshToken = req.cookies?.refreshToken;
-        // ✅ FIXED: Pass object với property name đúng
-        await userService.signOut({ refreshToken }); // Thay vì chỉ pass refreshToken
+        await userService.signOut({ refreshToken });
 
         res.clearCookie('refreshToken', {
             httpOnly: true,
@@ -167,8 +271,6 @@ async function refreshToken(req, res) {
 
         if (!oldToken) return res.status(401).json({ message: 'Không có refresh token' });
 
-        // DÙNG HÀM NÀY → TỰ ĐỘNG XÓA NẾU HẾT HẠN
-        // find valid session
         const session = await Session.findValidByRefreshToken(oldToken);
 
         if (!session) {
@@ -187,9 +289,6 @@ async function refreshToken(req, res) {
         return res.status(200).json({ accessToken });
     } catch (error) {
         console.error('Error refresh access token:', error);
-        // res.clearCookie('refreshToken', { 
-        //     httpOnly: true, secure: true, sameSite: 'none' 
-        // });
         return res.status(403).json(responses.ErrorResponse('phiên đăng nhập không hợp lệ'));
     }
 }
@@ -228,16 +327,15 @@ async function verifyOtp(req, res) {
             account_id: user.id
         });
 
-        // 5. Set refreshToken cookie with proper configuration
+        // Set refreshToken cookie
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // Only secure in production
+            secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
-
-        // 6. Return access token
+        // Return access token
         return res.status(StatusCodes.OK).json(responses.SuccessResponse({
             accessToken
         }));
@@ -248,11 +346,13 @@ async function verifyOtp(req, res) {
     }
 }
 
-
 module.exports = {
     signUp,
     signIn,
     signOut,
     refreshToken,
-    verifyOtp
+    verifyOtp,
+    getAccountDetails, // ✅ NEW
+    getUserProfile,    // ✅ NEW
+    checkPermission    // ✅ NEW
 };

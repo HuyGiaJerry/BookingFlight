@@ -4,11 +4,170 @@ const TokenService = require('./token-service');
 const AppError = require('../utils/errors/app-error');
 const { StatusCodes } = require('http-status-codes');
 const axios = require('axios');
+const { Account, Role, RolePermission } = require('../models');
 
 class UserService {
     constructor({ userRepo, sessionRepo }) {
-        this.userRepository = userRepo || new UserRepository();
-        this.sessionRepository = sessionRepo || new SessionRepository();
+        this.userRepository = userRepo;
+        this.sessionRepository = sessionRepo;
+    }
+
+    // ✅ CHỨC NĂNG: Lấy thông tin account + role + permissions từ token
+    // INPUT: token (JWT string)
+    // OUTPUT: Object chứa account info + role + permissions
+    async getAccountDetailsWithRolePermissions(token) {
+        try {
+            // Step 1: Verify and decode token
+            if (!token) {
+                throw new AppError('Access token is required', StatusCodes.UNAUTHORIZED);
+            }
+
+            // Remove 'Bearer ' prefix if present
+            const cleanToken = token.startsWith('Bearer ') ? token.slice(7) : token;
+
+            let decoded;
+            try {
+                decoded = TokenService.verifyAccessToken(cleanToken);
+            } catch (error) {
+                throw new AppError('Invalid or expired token', StatusCodes.UNAUTHORIZED);
+            }
+
+            const userId = decoded.userId;
+            if (!userId) {
+                throw new AppError('Invalid token payload', StatusCodes.UNAUTHORIZED);
+            }
+
+            // Step 2: Get account with role and permissions từ database
+            const account = await Account.findOne({
+                where: {
+                    id: userId
+                    // deleted: false // Chỉ lấy account active
+                },
+                attributes: ['id', 'fullname', 'email', 'phone', 'avatar', 'status'],
+                include: [
+                    {
+                        model: Role,
+                        as: 'role',
+                        include: [
+                            {
+                                model: RolePermission,
+                                as: 'rolePermissions',
+                                attributes: ['permission']
+                            }
+                        ]
+                    }
+                ],
+                attributes: {
+                    exclude: ['password'] // Không trả về password
+                }
+            });
+
+            if (!account) {
+                throw new AppError('Account not found or has been deactivated', StatusCodes.NOT_FOUND);
+            }
+
+            // Step 3: Format response data
+            const accountDetails = {
+                user: {
+                    id: account.id,
+                    fullname: account.fullname,
+                    email: account.email,
+                    phone: account.phone,
+                    avatar: account.avatar,
+                    status: account.status,
+                },
+                permissions: [account.role?.rolePermissions?.map(rp => rp.permission) || []]
+            };
+
+            console.log('✅ Account details retrieved successfully for userId:', userId);
+            return accountDetails;
+
+        } catch (error) {
+            console.error('❌ Error getting account details with role permissions:', error);
+
+            if (error instanceof AppError) {
+                throw error;
+            }
+
+            throw new AppError('Failed to retrieve account details', StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // ✅ CHỨC NĂNG: Lấy account theo ID (dùng nội bộ)
+    // INPUT: userId (number)
+    // OUTPUT: Account object với role và permissions
+    async getAccountById(userId) {
+        try {
+            const account = await Account.findOne({
+                where: {
+                    id: userId,
+                    deleted: false
+                },
+                include: [
+                    {
+                        model: Role,
+                        as: 'role',
+                        include: [
+                            {
+                                model: RolePermission,
+                                as: 'rolePermissions'
+                            }
+                        ]
+                    }
+                ],
+                attributes: {
+                    exclude: ['password']
+                }
+            });
+
+            return account;
+        } catch (error) {
+            console.error('Error getting account by ID:', error);
+            throw error;
+        }
+    }
+
+    // ✅ CHỨC NĂNG: Kiểm tra user có permission cụ thể không
+    // INPUT: token (JWT), requiredPermission (string)
+    // OUTPUT: Object {hasPermission: boolean, userRole: string, permissions: array}
+    async checkUserPermission(token, requiredPermission) {
+        try {
+            const accountDetails = await this.getAccountDetailsWithRolePermissions(token);
+
+            const hasPermission = accountDetails.role.permissions.includes(requiredPermission);
+
+            return {
+                hasPermission,
+                userRole: accountDetails.role.title,
+                permissions: accountDetails.role.permissions
+            };
+        } catch (error) {
+            console.error('Error checking user permission:', error);
+            throw error;
+        }
+    }
+
+    // ✅ CHỨC NĂNG: Lấy profile user (thông tin cơ bản)
+    // INPUT: token (JWT)
+    // OUTPUT: Object chứa thông tin profile cơ bản
+    async getUserProfile(token) {
+        try {
+            const accountDetails = await this.getAccountDetailsWithRolePermissions(token);
+
+            // Return only essential profile information
+            return {
+                id: accountDetails.id,
+                fullname: accountDetails.fullname,
+                email: accountDetails.email,
+                phone: accountDetails.phone,
+                avatar: accountDetails.avatar,
+                status: accountDetails.status,
+                role: accountDetails.role.title
+            };
+        } catch (error) {
+            console.error('Error getting user profile:', error);
+            throw error;
+        }
     }
 
     // async signUp(data, options = {}) {
@@ -57,7 +216,7 @@ class UserService {
             // }
 
             // Mã hóa mật khẩu
-            const hashedPassword = await bcrypt.hash(password, 10); // salt = 10
+            const hashedPassword = await bcrypt.hash(password, 10);
 
             // Tạo user mới
             const newUser = await this.userRepository.create({
@@ -79,11 +238,8 @@ class UserService {
         }
     }
 
-
     async signIn(data, options = {}) {
-        console.log('signin in run')
         try {
-
             const { email, password } = data;
             if (!email || !password) {
                 throw new Error('Thiếu thông tin đăng nhập !');
@@ -98,17 +254,7 @@ class UserService {
             if (!passwordMatch) {
                 return null;
             }
-            // // nếu khớp tạo access token
-            // const accessToken = TokenService.createAccessToken({ userId: user.id });
-            // // tạo refresh token
-            // const refreshToken = TokenService.createRefreshToken();
-            // const expiresAt = new Date(Date.now() + TokenService.getRefreshTokenTTL())
-            // // tạo session mới lưu refresh token 
-            // await this.sessionRepository.create({
-            //     refresh_token: refreshToken,
-            //     expire_at: expiresAt,
-            //     account_id: user.id
-            // })
+
             console.log(' service user: ', user)
             return user;
 
@@ -118,33 +264,14 @@ class UserService {
     }
 
     async signOut(data, options = {}) {
-        console.log('data: ', data)
         try {
-            // Lấy refresh token từ data(cookie)
             const { refreshToken } = data;
             if (!refreshToken) {
                 throw new Error('Thiếu thông tin đăng xuất !');
             }
             // Xóa refresh token (session) khỏi database
             await this.sessionRepository.deleteByRefreshToken(refreshToken);
-            // Xóa cookie trên trình duyệt
             return;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    async getUserById(userId) {
-        try {
-            return await this.userRepository.findOneWithAttributes('id', userId, { exclude: ['password'] });
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    async findByGoogleId(google_id) {
-        try {
-            return await this.userRepository.findOneWithAttributes('google_id', google_id, { exclude: ['password'] });
         } catch (error) {
             throw error;
         }
@@ -206,7 +333,6 @@ class UserService {
     // verify captcha
     async verifyCaptcha(captchaToken) {
         try {
-            // ====== VERIFY CAPTCHA ==========
             const verifyUrl = "https://www.google.com/recaptcha/api/siteverify";
 
             const r = await fetch(verifyUrl, {
@@ -224,5 +350,15 @@ class UserService {
             throw new AppError('Captcha verification failed', StatusCodes.INTERNAL_SERVER_ERROR);
         }
     }
+
+    async getUserById(userId) {
+        try {
+            return await this.userRepository.get(userId);
+        } catch (error) {
+            console.error('Error getting user by ID:', error);
+            throw error;
+        }
+    }
 }
+
 module.exports = UserService;

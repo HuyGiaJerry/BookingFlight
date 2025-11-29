@@ -3,11 +3,16 @@ const router = express.Router();
 const { AuthController } = require('../../controllers');
 const validateSignUp = require('../../validations/validateSignUp');
 
-// localhost:3600/api/v1/users    POST
+// ✅ AUTHENTICATION ROUTES
 router.post('/signup', validateSignUp, AuthController.signUp);
 router.post('/signin', AuthController.signIn);
 router.post('/signout', AuthController.signOut);
-router.post('/refresh_token', AuthController.refreshToken)
-router.post('/verify_otp', AuthController.verifyOtp)
+router.post('/refresh_token', AuthController.refreshToken);
+router.post('/verify_otp', AuthController.verifyOtp);
 
-module.exports = router;    
+// ✅ ACCOUNT INFO ROUTES - Lấy thông tin account và permissions
+router.get('/my-accounts', AuthController.getAccountDetails);
+router.get('/profile', AuthController.getUserProfile);
+router.post('/check-permission', AuthController.checkPermission);
+
+module.exports = router;

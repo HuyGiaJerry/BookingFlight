@@ -32,6 +32,8 @@ class TokenService {
         }
     }
 
+    
+
     static getRefreshTokenTTL() {
         const value = process.env.REFRESH_KEY_TTL || '7d';
 

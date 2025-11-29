@@ -14,4 +14,5 @@ module.exports = {
     SeatSelectionController: require('./seat-selection-controller'),
     ServiceSelectionController: require('./service-selection-controller'),
     FlightSelectionController: require('./flight-selection-controller'),
+    RoleController: require('./role-controller'),
 }

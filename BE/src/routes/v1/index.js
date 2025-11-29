@@ -7,13 +7,13 @@ const airportRouter = require('./airport-routes');
 const airlineRouter = require('./airline-routes');
 const airplaneRouter = require('./airplane-routes');
 const flightRouter = require('./flight-routes');
-const roleRouter = require('./role-rotes');
+const roleRouter = require('./role-routes');
 const passengerRouter = require('./passenger-routes');
 // const flightScheduleRouter = require('./flightschedule-routes');
 // const flightScheduleFareRouter = require('./flightschedulefare-routes');
 // const oauthRouter = require('./oauth-routes');
 // const bookingRouter = require('./booking-routes');
-const { ProtectedRoutes } = require('../../middlewares');
+const { ProtectedRoutes } = require('../../middlewares/auth-middleware');
 
 const bookingRoutes = require('./booking-routes');
 const seatRoutes = require('./seat-routes');

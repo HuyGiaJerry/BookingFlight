@@ -1,7 +1,10 @@
 const { Resend } = require('resend');
 
 
-console.log('API key', process.env.RESEND_API_KEY)
+
+// console.log('API key', process.env.RESEND_API_KEY)
+
+
 const resendInstance = new Resend(process.env.RESEND_API_KEY)
 
 // Function to resend email
@@ -25,7 +28,3 @@ async function sendEmail(to, subject, html) {
 module.exports = {
     sendEmail
 }
-
-
-
-

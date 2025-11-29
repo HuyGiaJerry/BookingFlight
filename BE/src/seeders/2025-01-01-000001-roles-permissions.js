@@ -20,10 +20,10 @@ module.exports = {
 
     const rolesData = [
       { title: 'Super Admin', description: 'Toàn quyền hệ thống' },
-      { title: 'Admin',       description: 'Quản trị viên cấp cao' },
-      { title: 'Staff',       description: 'Nhân viên hỗ trợ' },
-      { title: 'Customer',    description: 'Khách hàng' },
-      { title: 'Partner',     description: 'Đối tác B2B' },
+      { title: 'Admin', description: 'Quản trị viên cấp cao' },
+      { title: 'Staff', description: 'Nhân viên hỗ trợ' },
+      { title: 'Customer', description: 'Khách hàng' },
+      { title: 'Partner', description: 'Đối tác B2B' },
     ];
 
     await queryInterface.sequelize.transaction(async (t) => {
@@ -71,24 +71,24 @@ module.exports = {
       });
 
       // Staff
-      ['dashboard.access','flight.view','booking.view_any','booking.cancel','report.booking'].forEach(p => {
+      ['dashboard.access', 'flight.view', 'booking.view_any', 'booking.cancel', 'report.booking'].forEach(p => {
         rolePermissions.push({ role_id: roleMap['Staff'], permission: p, createdAt: now, updatedAt: now });
       });
 
       // Customer
-      ['dashboard.access','profile.view','profile.update','booking.view_own'].forEach(p => {
+      ['dashboard.access', 'profile.view', 'profile.update', 'booking.view_own'].forEach(p => {
         rolePermissions.push({ role_id: roleMap['Customer'], permission: p, createdAt: now, updatedAt: now });
       });
 
       // Partner
-      ['dashboard.access','flight.view','booking.view_any'].forEach(p => {
+      ['dashboard.access', 'flight.view', 'booking.view_any'].forEach(p => {
         rolePermissions.push({ role_id: roleMap['Partner'], permission: p, createdAt: now, updatedAt: now });
       });
 
       // Bước 4: Insert RolePermissions
       await queryInterface.bulkInsert('RolePermissions', rolePermissions, { transaction: t });
 
-            // TỰ ĐỘNG GÁN SUPER ADMIN CHO TÀI KHOẢN CỦA BẠN
+      // TỰ ĐỘNG GÁN SUPER ADMIN CHO TÀI KHOẢN CỦA BẠN
       await queryInterface.sequelize.query(`
         UPDATE Accounts 
         SET role_id = (SELECT id FROM Roles WHERE title = 'Super Admin' LIMIT 1)
@@ -105,7 +105,7 @@ module.exports = {
     await queryInterface.sequelize.transaction(async (t) => {
       await queryInterface.bulkDelete('RolePermissions', null, { transaction: t });
       await queryInterface.bulkDelete('Roles', {
-        title: ['Super Admin','Admin','Staff','Customer','Partner']
+        title: ['Super Admin', 'Admin', 'Staff', 'Customer', 'Partner']
       }, { transaction: t });
     });
   }

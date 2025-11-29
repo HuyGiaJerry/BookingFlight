@@ -28,10 +28,56 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Account.init({
-    fullname: DataTypes.STRING,
-    email: DataTypes.STRING,
-    phone: DataTypes.STRING,
-    password: DataTypes.STRING,
+    fullname: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        len: {
+          args: [2, 100],
+          msg: "Tên phải từ 2 đến 100 ký tự !"
+        },
+        is: {
+          args: /^[A-Za-zÀ-ỹà-ỹ\s]{2,50}$/,
+          msg: "Họ tên chỉ được chứa chữ và khoảng trắng"
+        }
+      }
+    },
+
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: {
+          msg: "Email không được để trống !"
+        },
+        is: {
+          args: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/,
+          msg: "Email không đúng định dạng"
+        },
+        len: {
+          args: [8, 100],
+          msg: "Email phải từ 8 đến 100 ký tự !"
+        }
+      }
+    },
+
+    phone: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      // validate: {
+      //   is: {
+      //     args: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/,
+      //     msg: "Password phải ≥ 8 ký tự và gồm chữ hoa, chữ thường, số và ký tự đặc biệt"
+      //   }
+      // }
+    },
+
     avatar: DataTypes.STRING,
     facebook_id: DataTypes.STRING,
     google_id: DataTypes.STRING,
@@ -40,11 +86,13 @@ module.exports = (sequelize, DataTypes) => {
     created_by: DataTypes.INTEGER,
     deleted_by: DataTypes.INTEGER,
     deleted_at: DataTypes.DATE,
-    deleted: DataTypes.BOOLEAN,
+    deleted: DataTypes.BOOLEAN
+
   }, {
     sequelize,
     modelName: 'Account',
     tableName: 'Accounts'
   });
+
   return Account;
 };

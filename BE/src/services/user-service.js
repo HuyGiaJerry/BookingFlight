@@ -47,14 +47,14 @@ class UserService {
         try {
             const { fullname, email, password, address } = data;
 
-            if (!fullname || !email || !password || !address) {
-                throw new Error('Thiếu thông tin đăng ký !');
-            }
+            // if (!fullname || !email || !password || !address) {
+            //     throw new Error('Thiếu thông tin đăng ký !');
+            // }
             // Kiểm tra user tồn tại chưa 
-            const duplicate = await this.userRepository.findByEmail(email);
-            if (duplicate) {
-                throw new Error('User đã tồn tại !');
-            }
+            // const duplicate = await this.userRepository.findByEmail(email);
+            // if (duplicate) {
+            //     throw new Error('User đã tồn tại !');
+            // }
 
             // Mã hóa mật khẩu
             const hashedPassword = await bcrypt.hash(password, 10); // salt = 10
@@ -67,6 +67,7 @@ class UserService {
                 address: address,
                 google_id: 0,
                 facebook_id: 0,
+                role_id: 4, // default role customer when register
                 is_active: 1
             })
             return {

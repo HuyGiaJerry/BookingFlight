@@ -11,9 +11,7 @@ module.exports = {
       },
       email: {
         allowNull: false,
-        unique: {
-          msg: "Email đã tồn tại !"
-        },
+        unique: true,
         type: Sequelize.STRING,
         validate: {
           notEmpty: {

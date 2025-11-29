@@ -239,7 +239,7 @@ async function verifyOtp(req, res) {
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: false,       // dev dùng http
-            sameSite: "none",    // bắt buộc vì FE và BE khác domain/port
+            sameSite: "lax",    // bắt buộc vì FE và BE khác domain/port
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 

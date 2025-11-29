@@ -50,11 +50,11 @@ router.use('/service-selection', servicesSelectionRoutes);
 router.use('/flight-selection', flightSelectionRoutes);
 
 // test router
+router.use('/airports', airportRouter);
 
 // private routes
 router.use(ProtectedRoutes);
 router.get('/home', HomeController.home);
-router.use('/airports', airportRouter);
 
 
 

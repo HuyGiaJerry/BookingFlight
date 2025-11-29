@@ -71,10 +71,10 @@ async function signIn(req, res) {
         const sentEmailResponse = await resendProvider.sendEmail(to, subject, html)
         console.log('sentEmailResponse:', sentEmailResponse)
 
-        return res.status(StatusCodes.OK).json({
+        return res.status(StatusCodes.OK).json(responses.SuccessResponse({
             message: 'OTP sent email',
             email: req.body.email
-        });
+        }));
 
         // res.cookie('refreshToken', refreshToken, {
         //     httpOnly: true,

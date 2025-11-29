@@ -2,7 +2,8 @@ const { StatusCodes } = require('http-status-codes');
 const { UserService, TokenService } = require('../services');
 const { UserRepository, SessionRepository } = require('../repositories');
 const { Session } = require('../models')
-
+const resendProvider = require('../providers/resendProvider');
+const otpService = require('../services/otpService');
 const userService = new UserService({
     userRepo: new UserRepository(),
     sessionRepo: new SessionRepository()
@@ -12,6 +13,15 @@ async function signUp(req, res) {
     console.log('req.body:', req.body)
     try {
         const user = await userService.signUp(req.body);
+
+        console.log('user:', user)
+
+        const to = user.email
+        const subject = 'Create account successfully - Trevoloka!'
+        const html = `<h1>Welcome to Trevoloka</h1><p>Your account has been created successfully.</p><p>Username: ${user.fullname}</p>`
+
+        const sentEmailResponse = await resendProvider.sendEmail(to, subject, html)
+        console.log('sentEmailResponse:', sentEmailResponse)
         return res
             .status(StatusCodes.CREATED)
             .json(user);
@@ -26,19 +36,56 @@ async function signUp(req, res) {
 
 async function signIn(req, res) {
     try {
-        const { accessToken, refreshToken } = await userService.signIn(req.body);
+        console.log('req body:', req.body)
+        // const { accessToken, refreshToken } = await userService.signIn(req.body);
+        const { captchaToken } = req.body;
+        console.log('Captcha Token:', captchaToken);
 
-        res.cookie('refreshToken', refreshToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        if (!captchaToken) {
+            return res
+                .status(StatusCodes.BAD_REQUEST)
+                .json({ error: 'Captcha missing' });
+        }
+
+        const data = await userService.verifyCaptcha(captchaToken);
+
+        if (!data.success) {
+            return res
+                .status(StatusCodes.BAD_REQUEST)
+                .json({ error: 'Captcha invalid' });
+        }
+
+        // generate otp
+        const otp = otpService.generateOTP();
+
+        // save otp redis
+        await otpService.saveOTP(req.body.email, otp);
+
+        // send otp to email
+        const to = req.body.email
+        const subject = 'Verify your email - Trevoloka!'
+        const html = `<h1>Verify your email</h1><p>Your OTP is: ${otp}</p>
+        <p>OTP will expire in 5 minutes</p>`
+
+        const sentEmailResponse = await resendProvider.sendEmail(to, subject, html)
+        console.log('sentEmailResponse:', sentEmailResponse)
+
+        return res.status(StatusCodes.OK).json({
+            message: 'OTP sent email',
+            email: req.body.email
         });
-        // Lưu refresh token vào db
 
-        return res
-            .status(StatusCodes.OK)
-            .json({ accessToken });
+        // res.cookie('refreshToken', refreshToken, {
+        //     httpOnly: true,
+        //     secure: true,
+        //     sameSite: 'none',
+        //     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        // });
+        // // Lưu refresh token vào db
+
+        // return res
+        //     .status(StatusCodes.OK)
+        //     .json({ accessToken });
     } catch (error) {
         console.error('Error sign in :', error);
         return res
@@ -46,6 +93,48 @@ async function signIn(req, res) {
             .json({ error: 'Internal Server Error' });
     }
 };
+
+// sync function signIn(req, res) {
+//     try {
+//         const { captchaToken } = req.body;
+//         console.log('Captcha Token:', captchaToken);
+
+//         if (!captchaToken) {
+//             return res
+//                 .status(StatusCodes.BAD_REQUEST)
+//                 .json({ error: 'Captcha missing' });
+//         }
+
+//         const data = await userService.verifyCaptcha(captchaToken);
+
+//         if (!data.success) {
+//             return res
+//                 .status(StatusCodes.BAD_REQUEST)
+//                 .json({ error: 'Captcha invalid' });
+//         }
+//         // =================================
+
+//         // Xử lý login
+//         const { accessToken, refreshToken } = await userService.signIn(req.body);
+
+//         res.cookie("refreshToken", refreshToken, {
+//             httpOnly: true,
+//             secure: true,
+//             sameSite: "none",
+//             maxAge: 7 * 24 * 60 * 60 * 1000
+//         });
+
+//         return res
+//             .status(StatusCodes.OK)
+//             .json({ accessToken });
+
+//     } catch (error) {
+//         console.error("Error sign in:", error);
+//         return res
+//             .status(StatusCodes.INTERNAL_SERVER_ERROR)
+//             .json({ error: 'Internal Server Error' });
+//     }
+// }
 
 
 async function signOut(req, res) {
@@ -73,10 +162,10 @@ async function refreshToken(req, res) {
         const session = await Session.findValidByRefreshToken(oldToken);
 
         if (!session) {
-            res.clearCookie('refreshToken', { 
-                httpOnly: true, 
-                secure: true, 
-                sameSite: 'none' 
+            res.clearCookie('refreshToken', {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none'
             });
             return res.status(403).json({
                 message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
@@ -97,9 +186,65 @@ async function refreshToken(req, res) {
     }
 }
 
+async function verifyOtp(req, res) {
+    try {
+        console.log("Verify Body:", req.body)
+
+        const { email, otp } = req.body;
+        if (!email || !otp) {
+            return res.status(400).json({ message: "Missing email or otp" });
+        }
+
+        const isValid = await otpService.verifyOTP(email, otp);
+        if (!isValid) {
+            return res.status(400).json({ message: 'OTP không hợp lệ' });
+        }
+
+        // Xoá OTP
+        await otpService.deleteOTP(email);
+
+        // find user
+        const user = await userService.findByEmail(email);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const accessToken = TokenService.createAccessToken({ userId: user.id });
+        const refreshToken = TokenService.createRefreshToken();
+        const expiresAt = new Date(Date.now() + TokenService.getRefreshTokenTTL());
+
+        // Lưu refresh token vào DB (session)
+        await new SessionRepository().create({
+            refresh_token: refreshToken,
+            expire_at: expiresAt,
+            account_id: user.id
+        });
+
+        // 5. Set refreshToken cookie
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        // 6. Return access token
+        return res.status(StatusCodes.OK).json({
+            message: "OTP verified successfully",
+            accessToken
+        });
+
+    } catch (error) {
+        console.error('Error verify otp:', error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+    }
+}
+
+
 module.exports = {
     signUp,
     signIn,
     signOut,
-    refreshToken
+    refreshToken,
+    verifyOtp
 };

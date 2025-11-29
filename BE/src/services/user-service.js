@@ -9,15 +9,47 @@ class UserService {
         this.sessionRepository = sessionRepo || new SessionRepository();
     }
 
+    // async signUp(data, options = {}) {
+    //     try {
+    //         const { fullname, phone_number, password, address } = data;
+
+    //         if (!fullname || !phone_number || !password || !address) {
+    //             throw new Error('Thiếu thông tin đăng ký !');
+    //         }
+    //         // Kiểm tra user tồn tại chưa 
+    //         const duplicate = await this.userRepository.findByPhoneNumber(phone_number);
+    //         if (duplicate) {
+    //             throw new Error('User đã tồn tại !');
+    //         }
+
+    //         // Mã hóa mật khẩu
+    //         const hashedPassword = await bcrypt.hash(password, 10); // salt = 10
+
+    //         // Tạo user mới
+    //         await this.userRepository.create({
+    //             fullname: fullname,
+    //             phone: phone_number,
+    //             password: hashedPassword,
+    //             address: address,
+    //             google_id: 0,
+    //             facebook_id: 0,
+    //             is_active: 1
+    //         })
+    //         return;
+    //     } catch (error) {
+    //         throw error;
+    //     }
+    // }
+
     async signUp(data, options = {}) {
         try {
-            const { fullname, phone_number, password, address } = data;
+            const { fullname, email, password, address } = data;
 
-            if (!fullname || !phone_number || !password || !address) {
+            if (!fullname || !email || !password || !address) {
                 throw new Error('Thiếu thông tin đăng ký !');
             }
             // Kiểm tra user tồn tại chưa 
-            const duplicate = await this.userRepository.findByPhoneNumber(phone_number);
+            const duplicate = await this.userRepository.findByEmail(email);
             if (duplicate) {
                 throw new Error('User đã tồn tại !');
             }
@@ -26,16 +58,19 @@ class UserService {
             const hashedPassword = await bcrypt.hash(password, 10); // salt = 10
 
             // Tạo user mới
-            await this.userRepository.create({
+            const newUser = await this.userRepository.create({
                 fullname: fullname,
-                phone: phone_number,
+                email: email,
                 password: hashedPassword,
                 address: address,
                 google_id: 0,
                 facebook_id: 0,
                 is_active: 1
             })
-            return;
+            return {
+                email: newUser.email,
+                fullname: newUser.fullname
+            }
         } catch (error) {
             throw error;
         }
@@ -45,12 +80,12 @@ class UserService {
     async signIn(data, options = {}) {
         try {
 
-            const { phone_number, password } = data;
-            if (!phone_number || !password) {
+            const { email, password } = data;
+            if (!email || !password) {
                 throw new Error('Thiếu thông tin đăng nhập !');
             }
             // so sánh hashed pass với pass input
-            const user = await this.userRepository.findByPhoneNumber(phone_number);
+            const user = await this.userRepository.findByEmail(email);
             if (!user) {
                 throw new Error('User or password không đúng !');
             }
@@ -58,18 +93,19 @@ class UserService {
             if (!passwordMatch) {
                 throw new Error('User or password không đúng !');
             }
-            // nếu khớp tạo access token
-            const accessToken = TokenService.createAccessToken({ userId: user.id });
-            // tạo refresh token
-            const refreshToken = TokenService.createRefreshToken();
-            const expiresAt = new Date(Date.now() + TokenService.getRefreshTokenTTL())
-            // tạo session mới lưu refresh token 
-            await this.sessionRepository.create({
-                refresh_token: refreshToken,
-                expire_at: expiresAt,
-                account_id: user.id
-            })
-            return { accessToken, refreshToken };
+            // // nếu khớp tạo access token
+            // const accessToken = TokenService.createAccessToken({ userId: user.id });
+            // // tạo refresh token
+            // const refreshToken = TokenService.createRefreshToken();
+            // const expiresAt = new Date(Date.now() + TokenService.getRefreshTokenTTL())
+            // // tạo session mới lưu refresh token 
+            // await this.sessionRepository.create({
+            //     refresh_token: refreshToken,
+            //     expire_at: expiresAt,
+            //     account_id: user.id
+            // })
+            delete user.password;
+            return user;
 
         } catch (error) {
             throw error;
@@ -158,5 +194,27 @@ class UserService {
         }
     }
 
+
+    // verify captcha
+    async verifyCaptcha(captchaToken) {
+        try {
+            // ====== VERIFY CAPTCHA ==========
+            const verifyUrl = "https://www.google.com/recaptcha/api/siteverify";
+
+            const r = await fetch(verifyUrl, {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`
+            });
+
+            const data = await r.json();
+            console.log("Captcha verification:", data);
+            return data;
+        } catch (error) {
+            throw new AppError('Captcha verification failed', StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
 module.exports = UserService;

@@ -31,6 +31,13 @@ const protectedRoutes = (req, res, next) => {
             if (!existingUser) {
                 return res.status(StatusCodes.UNAUTHORIZED).json({ error: 'Unauthorized' });
             }
+            console.log('existingUser.role: ', existingUser)
+            const user = await new UserRepository().getWithRoleAndPermissions(existingUser.id);
+            console.log('user.role: ', user)
+
+            if (user.role.title === 'Customer') return res.status(403).json({
+                message: "Forbidden: Customers cannot access admin routes"
+            });
             // trả về user cho req
             console.log("Auth account: ", existingUser)
             req.user = existingUser;

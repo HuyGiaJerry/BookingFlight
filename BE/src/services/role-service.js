@@ -1,6 +1,7 @@
 const { StatusCodes } = require('http-status-codes');
 const AppError = require('../utils/errors/app-error');
 const RoleRepository = require('../repositories/role-repository');
+const { Role, RolePermission } = require('../models');
 
 class RoleService {
   constructor(roleRepository) {
@@ -38,6 +39,10 @@ class RoleService {
     }
   }
 
+  // GET ALL ROLE AND PERMISSION
+  async getAllRoleAndPermission() {
+    return await this.roleRepository.getAllRoleAndPermissions();
+  }
   // GET BY ID
   async getById(id) {
     const role = await this.roleRepository.get(id);
@@ -85,7 +90,55 @@ class RoleService {
       throw new AppError('Unable to delete role', StatusCodes.INTERNAL_SERVER_ERROR);
     }
   }
-  // update role
+  // xóa permission cũ 
+  async deleteRolePermission(roleId) {
+    try {
+      const deleted = await this.roleRepository.destroy(roleId);
+      if (!deleted) throw new AppError('Role not found', StatusCodes.NOT_FOUND);
+      return deleted;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError('Unable to delete role permission', StatusCodes.INTERNAL_SERVER_ERROR);
+    }
+  }
+  async updateRolePermission(roleId, permissions = []) {
+    const role = await Role.findByPk(roleId);
+    if (!role) throw new AppError("Role not found", StatusCodes.NOT_FOUND);
+
+    // Lấy permission cũ
+    const current = await RolePermission.findAll({
+      where: { role_id: roleId }
+    });
+
+    const oldList = current.map(p => p.permission);
+
+    const toDelete = oldList.filter(p => !permissions.includes(p));
+    const toAdd = permissions.filter(p => !oldList.includes(p));
+
+    // if (toDelete.length > 0) {
+    //   await RolePermission.destroy({
+    //     where: {
+    //       role_id: roleId,
+    //       permission: toDelete
+    //     }
+    //   });
+    // }
+
+    if (toAdd.length > 0) {
+      const inserts = toAdd.map(p => ({
+        role_id: roleId,
+        permission: p
+      }));
+
+      await RolePermission.bulkCreate(inserts);
+    }
+
+    return await Role.findByPk(roleId, {
+      include: [{ model: RolePermission, as: "rolePermissions" }]
+    });
+  }
+
+
 }
 
 module.exports = RoleService;

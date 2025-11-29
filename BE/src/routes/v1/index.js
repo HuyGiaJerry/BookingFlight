@@ -29,7 +29,6 @@ const router = express.Router();
 
 // public routes
 router.use('/auth', authRouter);
-router.use('/airports', airportRouter);
 router.use('/airlines', airlineRouter);
 router.use('/airplanes', airplaneRouter);
 router.use('/flights', flightRouter);
@@ -54,6 +53,8 @@ router.use('/flight-selection', flightSelectionRoutes);
 // private routes
 router.use(ProtectedRoutes);
 router.get('/home', HomeController.home);
+router.use('/airports', airportRouter);
+
 
 
 

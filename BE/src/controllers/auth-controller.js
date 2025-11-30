@@ -11,111 +11,7 @@ const userService = new UserService({
     sessionRepo: new SessionRepository()
 });
 
-// ✅ CHỨC NĂNG: Lấy thông tin chi tiết account + role + permissions
-// REQUEST: GET /api/v1/auth/account-details
-// HEADER: Authorization: Bearer <token>
-// RESPONSE: Account info + role + permissions
-async function getAccountDetails(req, res) {
-    try {
-        // Lấy token từ header
-        const authHeader = req.headers.authorization;
-        if (!authHeader) {
-            return res.status(StatusCodes.UNAUTHORIZED).json(
-                responses.ErrorResponse('Authorization header is required')
-            );
-        }
-
-        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-
-        // Gọi service để lấy account details
-        const accountDetails = await userService.getAccountDetailsWithRolePermissions(token);
-
-        return res.status(StatusCodes.OK).json(
-            responses.SuccessResponse(accountDetails)
-        );
-
-    } catch (error) {
-        console.error('Error getting account details:', error);
-
-        const statusCode = error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
-        return res.status(statusCode).json(
-            responses.ErrorResponse(error.message || 'Failed to get account details')
-        );
-    }
-}
-
-// ✅ CHỨC NĂNG: Lấy profile user (thông tin cơ bản)
-// REQUEST: GET /api/v1/auth/profile
-// HEADER: Authorization: Bearer <token>
-// RESPONSE: Basic profile info
-async function getUserProfile(req, res) {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader) {
-            return res.status(StatusCodes.UNAUTHORIZED).json(
-                responses.ErrorResponse('Authorization header is required')
-            );
-        }
-
-        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-        const profile = await userService.getUserProfile(token);
-
-        return res.status(StatusCodes.OK).json(
-            responses.SuccessResponse(profile)
-        );
-
-    } catch (error) {
-        console.error('Error getting user profile:', error);
-
-        const statusCode = error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
-        return res.status(statusCode).json(
-            responses.ErrorResponse(error.message || 'Failed to get user profile')
-        );
-    }
-}
-
-// ✅ CHỨC NĂNG: Kiểm tra permission của user
-// REQUEST: POST /api/v1/auth/check-permission
-// HEADER: Authorization: Bearer <token>
-// BODY: {"permission": "read_users"}
-// RESPONSE: {hasPermission: true/false, userRole, permissions[]}
-async function checkPermission(req, res) {
-    try {
-        const authHeader = req.headers.authorization;
-        const { permission } = req.body;
-
-        if (!authHeader) {
-            return res.status(StatusCodes.UNAUTHORIZED).json(
-                responses.ErrorResponse('Authorization header is required')
-            );
-        }
-
-        if (!permission) {
-            return res.status(StatusCodes.BAD_REQUEST).json(
-                responses.ErrorResponse('Permission is required')
-            );
-        }
-
-        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-        const result = await userService.checkUserPermission(token, permission);
-
-        return res.status(StatusCodes.OK).json(
-            responses.SuccessResponse(result)
-        );
-
-    } catch (error) {
-        console.error('Error checking permission:', error);
-
-        const statusCode = error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
-        return res.status(statusCode).json(
-            responses.ErrorResponse(error.message || 'Failed to check permission')
-        );
-    }
-}
-
-// ✅ EXISTING FUNCTIONS - giữ nguyên...
-
-async function signUp(req, res) {
+async function signUp(req, res, next) {
     console.log('req.body:', req.body)
     try {
         const user = await userService.signUp(req.body);
@@ -132,14 +28,11 @@ async function signUp(req, res) {
             .status(StatusCodes.CREATED)
             .json(responses.SuccessResponse(user));
     } catch (error) {
-        console.error('Error sign up user:', error);
-        return res
-            .status(StatusCodes.INTERNAL_SERVER_ERROR)
-            .json({ error: error.message });
+        next(error);
     }
 };
 
-async function signIn(req, res,next) {
+async function signIn(req, res, next) {
     try {
         console.log('req body:', req.body)
         const { email, password } = req.body;
@@ -167,7 +60,7 @@ async function signIn(req, res,next) {
         if (!data.success) {
             return res
                 .status(StatusCodes.BAD_REQUEST)
-                .json({ error: 'Captcha invalid' });
+                .json(responses.ErrorResponse('Captcha invalid'));
         }
 
         console.log('user:', user)
@@ -197,50 +90,7 @@ async function signIn(req, res,next) {
 };
 
 
-// sync function signIn(req, res) {
-//     try {
-//         const { captchaToken } = req.body;
-//         console.log('Captcha Token:', captchaToken);
-
-//         if (!captchaToken) {
-//             return res
-//                 .status(StatusCodes.BAD_REQUEST)
-//                 .json({ error: 'Captcha missing' });
-//         }
-
-//         const data = await userService.verifyCaptcha(captchaToken);
-
-//         if (!data.success) {
-//             return res
-//                 .status(StatusCodes.BAD_REQUEST)
-//                 .json({ error: 'Captcha invalid' });
-//         }
-//         // =================================
-
-//         // Xử lý login
-//         const { accessToken, refreshToken } = await userService.signIn(req.body);
-
-//         res.cookie("refreshToken", refreshToken, {
-//             httpOnly: true,
-//             secure: true,
-//             sameSite: "none",
-//             maxAge: 7 * 24 * 60 * 60 * 1000
-//         });
-
-//         return res
-//             .status(StatusCodes.OK)
-//             .json({ accessToken });
-
-//     } catch (error) {
-//         console.error("Error sign in:", error);
-//         return res
-//             .status(StatusCodes.INTERNAL_SERVER_ERROR)
-//             .json({ error: 'Internal Server Error' });
-//     }
-// }
-
-
-async function signOut(req, res) {
+async function signOut(req, res, next) {
     try {
         const refreshToken = req.cookies?.refreshToken;
         await userService.signOut({ refreshToken });
@@ -255,10 +105,7 @@ async function signOut(req, res) {
             .status(StatusCodes.OK)
             .json(responses.SuccessResponse({ message: 'Signed out successfully' }));
     } catch (error) {
-        console.error('Error sign out:', error);
-        return res
-            .status(StatusCodes.INTERNAL_SERVER_ERROR)
-            .json(responses.ErrorResponse(error));
+        next(error);
     }
 }
 
@@ -285,12 +132,11 @@ async function refreshToken(req, res) {
         const accessToken = TokenService.createAccessToken({ userId })
         return res.status(200).json({ accessToken });
     } catch (error) {
-        console.error('Error refresh access token:', error);
-        return res.status(403).json(responses.ErrorResponse('phiên đăng nhập không hợp lệ'));
+        next(error);
     }
 }
 
-async function verifyOtp(req, res) {
+async function verifyOtp(req, res, next) {
     try {
         console.log("Verify Body:", req.body)
 
@@ -327,10 +173,16 @@ async function verifyOtp(req, res) {
         // Set refreshToken cookie
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000,
+            secure: true, // false : bắt buộc dùng HTTPS
+            sameSite: "none", 
+            maxAge: 7 * 24 * 60 * 60 * 1000, 
         });
+        // res.cookie('refreshToken', refreshToken, {
+        //     httpOnly: true,
+        //     secure: process.env.NODE_ENV === 'production',
+        //     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        //     maxAge: 7 * 24 * 60 * 60 * 1000,
+        // });
 
         // Return access token
         return res.status(StatusCodes.OK).json(responses.SuccessResponse({
@@ -338,10 +190,98 @@ async function verifyOtp(req, res) {
         }));
 
     } catch (error) {
-        console.error('Error verify otp:', error);
-        return res.status(500).json(responses.ErrorResponse(error));
+        next(error);
     }
 }
+
+// ✅ CHỨC NĂNG: Lấy thông tin chi tiết account + role + permissions
+// REQUEST: GET /api/v1/auth/account-details
+// HEADER: Authorization: Bearer <token>
+// RESPONSE: Account info + role + permissions
+async function getAccountDetails(req, res, next) {
+    try {
+        // Lấy token từ header
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(StatusCodes.UNAUTHORIZED).json(
+                responses.ErrorResponse('Authorization header is required')
+            );
+        }
+
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+
+        // Gọi service để lấy account details
+        const accountDetails = await userService.getAccountDetailsWithRolePermissions(token);
+
+        return res.status(StatusCodes.OK).json(
+            responses.SuccessResponse(accountDetails)
+        );
+
+    } catch (error) {
+        console.error('Error getting account details:', error);
+        next(error);
+    }
+}
+
+// ✅ CHỨC NĂNG: Lấy profile user (thông tin cơ bản)
+// REQUEST: GET /api/v1/auth/profile
+// HEADER: Authorization: Bearer <token>
+// RESPONSE: Basic profile info
+async function getUserProfile(req, res, next) {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(StatusCodes.UNAUTHORIZED).json(
+                responses.ErrorResponse('Authorization header is required')
+            );
+        }
+
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        const profile = await userService.getUserProfile(token);
+
+        return res.status(StatusCodes.OK).json(
+            responses.SuccessResponse(profile)
+        );
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+// ✅ CHỨC NĂNG: Kiểm tra permission của user
+// REQUEST: POST /api/v1/auth/check-permission
+// HEADER: Authorization: Bearer <token>
+// BODY: {"permission": "read_users"}
+// RESPONSE: {hasPermission: true/false, userRole, permissions[]}
+async function checkPermission(req, res, next) {
+    try {
+        const authHeader = req.headers.authorization;
+        const { permission } = req.body;
+
+        if (!authHeader) {
+            return res.status(StatusCodes.UNAUTHORIZED).json(
+                responses.ErrorResponse('Authorization header is required')
+            );
+        }
+
+        if (!permission) {
+            return res.status(StatusCodes.BAD_REQUEST).json(
+                responses.ErrorResponse('Permission is required')
+            );
+        }
+
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        const result = await userService.checkUserPermission(token, permission);
+
+        return res.status(StatusCodes.OK).json(
+            responses.SuccessResponse(result)
+        );
+
+    } catch (error) {
+        next(error);
+    }
+}
+
 
 module.exports = {
     signUp,
@@ -349,7 +289,8 @@ module.exports = {
     signOut,
     refreshToken,
     verifyOtp,
-    getAccountDetails, // ✅ NEW
-    getUserProfile,    // ✅ NEW
-    checkPermission    // ✅ NEW
+    // ✅ NEW
+    getAccountDetails,
+    getUserProfile,
+    checkPermission
 };

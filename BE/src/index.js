@@ -5,12 +5,16 @@ const apiRouter = require('./routes');
 const { ErrorHandler } = require('./middlewares');
 const { ProtectedRoutes } = require('./middlewares')
 var cookieParser = require('cookie-parser');
+const { xss } = require('express-xss-sanitizer');
 const app = express();
 const { sequelize } = require('./models');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(xss());  
 const cors = require('cors');
+
+
 
 // const isProduction = process.env.NODE_ENV === 'production';
 // app.use(cors({

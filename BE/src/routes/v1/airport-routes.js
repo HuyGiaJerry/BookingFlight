@@ -5,7 +5,7 @@ const { AirportController } = require('../../controllers');
 // const { ProtectedRoutes } = require('../../middlewares');
 
 // router.use(ProtectedRoutes);
-router.post('/', authorize('airport.create'), AirportController.createAirport);
+router.post('/',  AirportController.createAirport);
 router.get('/', AirportController.getAllAirports);
 // router.get('/', authorize('airport.view'), AirportController.getAllAirports);
 router.get('/search', AirportController.searchAirports);

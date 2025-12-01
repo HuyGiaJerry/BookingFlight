@@ -1,25 +1,28 @@
 
-const SuccessResponse = (data, message = "Successful the request") => {
+const SuccessResponse = (data, message = "Successful the request", status) => {
     return {
         success: true,
+        status: status,
         message: message,
         data: data,
         error: {}
     }
 }
 
-const ErrorResponse = (error, message = "Error occurred") => {
+const ErrorResponse = (error, message = "Error occurred",status) => {
     return {
         success: false,
+        status: status,
         message: message,
         data: {},
         error: error
     }
 }
 
-const PaginationResponse = (items, pagination, message = "Successful the request") => {
+const PaginationResponse = ( items, pagination, message = "Successful the request",status) => {
     return {
         success: true,
+        status: status,
         message: message,
         data: items,
         pagination: pagination,

@@ -3,6 +3,7 @@ const { StatusCodes } = require('http-status-codes');
 const { UserService } = require('../services');
 const { UserRepository, SessionRepository } = require('../repositories');
 const responses = require('../utils/common/responses');
+const e = require('express');
 
 const userService = new UserService({
     userRepo: new UserRepository(),
@@ -70,7 +71,15 @@ const authenticateToken = async (req, res, next) => {
         }
 
         const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-
+        console.log('Token:', token);
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.ACCESS_KEY_SECRET);
+        } catch (err) {
+            return res.status(StatusCodes.UNAUTHORIZED).json(
+                responses.ErrorResponse('Invalid or expired token', 'Invalid or expired token', StatusCodes.UNAUTHORIZED)
+            );
+        }
         // ✅ Lấy user details và attach vào request
         const accountDetails = await userService.getAccountDetailsWithRolePermissions(token);
         req.user = accountDetails;
@@ -81,7 +90,7 @@ const authenticateToken = async (req, res, next) => {
 
         const statusCode = error.statusCode || StatusCodes.UNAUTHORIZED;
         return res.status(statusCode).json(
-            responses.ErrorResponse(error.message || 'Authentication failed')
+            responses.ErrorResponse(error.message, error.message || 'Authentication failed', statusCode)
         );
     }
 };

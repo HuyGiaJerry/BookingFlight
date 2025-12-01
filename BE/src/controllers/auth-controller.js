@@ -113,6 +113,8 @@ async function refreshToken(req, res) {
     try {
         const oldToken = req.cookies?.refreshToken;
 
+        console.log('Old Refresh Token:', oldToken);
+
         if (!oldToken) return res.status(401).json({ message: 'Không có refresh token' });
 
         const session = await Session.findValidByRefreshToken(oldToken);
@@ -173,8 +175,8 @@ async function verifyOtp(req, res, next) {
         // Set refreshToken cookie
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: true, // false : bắt buộc dùng HTTPS
-            sameSite: "none", 
+            secure: false, // true : bắt buộc dùng HTTPS
+            sameSite: "lax", // 'none' for cross-site, 'lax' or 'strict' for same-site
             maxAge: 7 * 24 * 60 * 60 * 1000, 
         });
         // res.cookie('refreshToken', refreshToken, {
@@ -198,14 +200,15 @@ async function verifyOtp(req, res, next) {
 // REQUEST: GET /api/v1/auth/account-details
 // HEADER: Authorization: Bearer <token>
 // RESPONSE: Account info + role + permissions
-async function getAccountDetails(req, res, next) {
+async function getAccountDetails(req, res) {
     try {
         // Lấy token từ header
         const authHeader = req.headers.authorization;
         if (!authHeader) {
             return res.status(StatusCodes.UNAUTHORIZED).json(
-                responses.ErrorResponse('Authorization header is required')
+                responses.ErrorResponse('Authorization header is required', StatusCodes.UNAUTHORIZED)
             );
+            // responses.ErrorResponse('Authorization header is required')
         }
 
         const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
@@ -214,12 +217,16 @@ async function getAccountDetails(req, res, next) {
         const accountDetails = await userService.getAccountDetailsWithRolePermissions(token);
 
         return res.status(StatusCodes.OK).json(
-            responses.SuccessResponse(accountDetails)
+            responses.SuccessResponse(accountDetails, 'Account details retrieved successfully', StatusCodes.OK)
         );
+        // responses.SuccessResponse(accountDetails)
 
     } catch (error) {
         console.error('Error getting account details:', error);
-        next(error);
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(
+            responses.ErrorResponse('Internal Server Error', 'Internal Server Error', StatusCodes.INTERNAL_SERVER_ERROR)
+        );
+        // next(error);
     }
 }
 

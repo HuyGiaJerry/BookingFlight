@@ -175,8 +175,8 @@ async function verifyOtp(req, res, next) {
         // Set refreshToken cookie
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: false, // true : bắt buộc dùng HTTPS
-            sameSite: "lax", // 'none' for cross-site, 'lax' or 'strict' for same-site
+            secure: true, // true : bắt buộc dùng HTTPS
+            sameSite: "none", // 'none' for cross-site, 'lax' or 'strict' for same-site
             maxAge: 7 * 24 * 60 * 60 * 1000, 
         });
         // res.cookie('refreshToken', refreshToken, {

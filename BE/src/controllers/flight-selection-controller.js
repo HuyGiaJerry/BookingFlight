@@ -24,7 +24,7 @@ class FlightSelectionController {
 
             const result = await this.flightSelectionService.createFlightSelectionSession(payload);
 
-            return res.status(StatusCodes.CREATED).json(Responses.SuccessResponse(result, 'BoookingSession created successfully'));
+            return res.status(StatusCodes.CREATED).json(Responses.SuccessResponse(result, 'BoookingSession created successfully',StatusCodes.CREATED));
 
         } catch (error) {
             console.error('Error creating flight selection session:', error);

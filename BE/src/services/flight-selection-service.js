@@ -36,9 +36,7 @@ class FlightSelectionService {
             const currentData = session.session_data || {};
             const updatedSessionData = {
                 ...currentData,
-                flight_selection
-                
-                : flightSelectionsData
+                flight_selection: flightSelectionsData
             };
 
             // ✅ Update with transaction

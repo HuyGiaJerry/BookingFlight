@@ -9,13 +9,14 @@ class AirlineService {
 
     async createAirline(data){
         try {
-            const {name, logo_url, code} = data;
-            if(!name || !code) throw new AppError('Name and code are required', StatusCodes.BAD_REQUEST);
+            const {name, logo_url,logo_public_id, iata_code} = data;
+            if(!name || !iata_code) throw new AppError('Name and IATA code are required', StatusCodes.BAD_REQUEST);
 
             return await this.airlineRepository.create({
                 name,
                 logo_url,
-                code
+                logo_public_id,
+                iata_code
             })
 
         } catch (error) {

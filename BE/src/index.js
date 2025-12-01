@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const { ServerConfig, Logger } = require('./config');
 const { SeatCleanupService } = require('./services')
@@ -13,45 +14,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(xss());  
 const cors = require('cors');
-
-
-
-// const isProduction = process.env.NODE_ENV === 'production';
-// app.use(cors({
-//     origin: isProduction
-//         ? process.env.FRONTEND_URL_DEPLOY  // FE deploy (Vercel,...)
-//         : process.env.FRONTEND_URL_DEV || "http://localhost:3001",   // FE dev local
-//     credentials: true,
-//     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-//     allowedHeaders: ["Content-Type", "Authorization"],
-// }));
-// app.use(cors({
-//     origin: process.env.FRONTEND_URL_DEV || 'http://localhost:3001',
-//     credentials: true
-// }));
-
-
-// const allowedOrigins = [
-//     process.env.FRONTEND_URL,
-//     "http://localhost:5173",
-// ].filter(Boolean) as string[];
-
-// // CORS — FIX QUAN TRỌNG
-// app.use(
-//     cors({
-//         origin: (origin, callback) => {
-//             if (!origin) return callback(null, true);
-
-//             if (allowedOrigins.includes(origin)) {
-//                 return callback(null, true);
-//             }
-
-//             console.log("❌ Blocked by CORS:", origin);
-//             return callback(new Error("Not allowed by CORS"));
-//         },
-//         credentials: true,
-//     })
-// );
 
 const allowedOrigins = [
     process.env.FRONTEND_URL_DEV?.trim(),
@@ -88,12 +50,12 @@ app.listen(process.env.PORT || 3600, async () => {
         await sequelize.authenticate();
         console.log('✅ Database connection established successfully!');
         // ✅ THÊM: Start auto-cleanup service AFTER database connection
-        console.log('🧹 Starting seat cleanup service...');
-        const seatCleanupService = new SeatCleanupService();
-        seatCleanupService.startAutoCleanup();
+        // console.log('🧹 Starting seat cleanup service...');
+        // const seatCleanupService = new SeatCleanupService();
+        // seatCleanupService.startAutoCleanup();
 
-        // Store globally để có thể stop khi shutdown
-        global.seatCleanupService = seatCleanupService;
+        // // Store globally để có thể stop khi shutdown
+        // global.seatCleanupService = seatCleanupService;
     } catch (error) {
         console.error('❌ Unable to connect to database:', error.message);
         process.exit(1); // thoát ứng dụng nếu không kết nối được DB
@@ -101,29 +63,29 @@ app.listen(process.env.PORT || 3600, async () => {
     // Logger.info("Successfully started the server", "root", {});
 });
 
-// ✅ THÊM: Graceful shutdown handlers
-process.on('SIGTERM', () => {
-    console.log('📋 SIGTERM received, shutting down gracefully...');
-    if (global.seatCleanupService) {
-        global.seatCleanupService.stopAutoCleanup();
-    }
-    process.exit(0);
-});
+// // ✅ THÊM: Graceful shutdown handlers
+// process.on('SIGTERM', () => {
+//     console.log('📋 SIGTERM received, shutting down gracefully...');
+//     if (global.seatCleanupService) {
+//         global.seatCleanupService.stopAutoCleanup();
+//     }
+//     process.exit(0);
+// });
 
-process.on('SIGINT', () => {
-    console.log('📋 SIGINT received (Ctrl+C), shutting down gracefully...');
-    if (global.seatCleanupService) {
-        global.seatCleanupService.stopAutoCleanup();
-    }
-    process.exit(0);
-});
+// process.on('SIGINT', () => {
+//     console.log('📋 SIGINT received (Ctrl+C), shutting down gracefully...');
+//     if (global.seatCleanupService) {
+//         global.seatCleanupService.stopAutoCleanup();
+//     }
+//     process.exit(0);
+// });
 
-// ✅ THÊM: Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-    console.error('❌ Uncaught Exception:', error);
-    if (global.seatCleanupService) {
-        global.seatCleanupService.stopAutoCleanup();
-    }
-    process.exit(1);
+// // ✅ THÊM: Handle uncaught exceptions
+// process.on('uncaughtException', (error) => {
+//     console.error('❌ Uncaught Exception:', error);
+//     if (global.seatCleanupService) {
+//         global.seatCleanupService.stopAutoCleanup();
+//     }
+//     process.exit(1);
 
-});
+// });

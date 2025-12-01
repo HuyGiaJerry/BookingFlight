@@ -5,7 +5,6 @@ const SuccessResponse = (data, message = "Successful the request", status) => {
         status: status,
         message: message,
         data: data,
-        error: {}
     }
 }
 

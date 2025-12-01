@@ -15,4 +15,5 @@ module.exports = {
     ServiceSelectionController: require('./service-selection-controller'),
     FlightSelectionController: require('./flight-selection-controller'),
     RoleController: require('./role-controller'),
+    UploadController: require('./upload-controller'),
 }

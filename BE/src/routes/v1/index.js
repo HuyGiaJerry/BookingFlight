@@ -23,6 +23,7 @@ const flightSummaryRoutes = require('./flight-summary-routes');
 const seatSelectionRoutes = require('./seat-selection-routes');
 const servicesSelectionRoutes = require('./services-selection-routes');
 const flightSelectionRoutes = require('./flight-selection-routes');
+const uploadRoutes = require('./upload-routes');
 // const oauthRouter = require('./oauth-routes');
 // const {ProtectedRoutes} = require('../../middlewares');
 const router = express.Router();
@@ -51,6 +52,8 @@ router.use('/flight-selection', flightSelectionRoutes);
 
 // test router
 router.use('/airports', airportRouter);
+
+router.use('/upload', uploadRoutes);
 
 // private routes
 router.use(ProtectedRoutes);

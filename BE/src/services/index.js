@@ -21,4 +21,5 @@ module.exports = {
     SeatCleanupService: require('./seat-cleanup-service'),
     SessionManagerService: require('./session-manager-service'),
     FlightSelectionService: require('./flight-selection-service'),
+    UploadService: require('./upload-service'),
 }

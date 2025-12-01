@@ -35,7 +35,8 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
 
-    logo_url: DataTypes.STRING
+    logo_url: DataTypes.STRING ,
+    logo_public_id: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'Airline',

@@ -22,6 +22,9 @@ module.exports = {
       logo_url: {
         type: Sequelize.STRING,
       },
+      logo_public_id: {
+        type: Sequelize.STRING,
+      },
 
       createdAt: {
         allowNull: false,

@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const { StatusCodes } = require('http-status-codes');
 const { UserService } = require('../services');
 const { UserRepository, SessionRepository } = require('../repositories');
-const responses = require('../utils/common/responses');
+const { Responses } = require('../utils/common');
 const e = require('express');
 
 const userService = new UserService({
@@ -17,21 +17,21 @@ const protectedRoutes = (req, res, next) => {
         const token = authHeader && authHeader.split(' ')[1];
 
         if (!token) {
-            return res.status(StatusCodes.UNAUTHORIZED).json({ error: 'Unauthorized' });
+            return res.status(StatusCodes.UNAUTHORIZED).json(Responses.ErrorResponse('Token is required', 'UNAUTHORIZED', StatusCodes.UNAUTHORIZED));
         }
 
         jwt.verify(token, process.env.ACCESS_KEY_SECRET, async (err, decodedUser) => {
             if (err) {
-                return res.status(StatusCodes.FORBIDDEN).json({ error: 'Forbidden' });
+                return res.status(StatusCodes.FORBIDDEN).json(Responses.ErrorResponse('Forbiddennnnn', 'Forbidden', StatusCodes.FORBIDDEN));
             }
 
             console.log('decodedUser.userId: ', decodedUser.userId);
 
             // ✅ FIX: Use existing service method
-            const existingUser = await userService.getAccountById(decodedUser.userId);
+            const existingUser = await userService.getUserById(decodedUser.userId);
 
             if (!existingUser) {
-                return res.status(StatusCodes.UNAUTHORIZED).json({ error: 'Unauthorized' });
+                return res.status(StatusCodes.UNAUTHORIZED).json(Responses.ErrorResponse('User not found', 'UNAUTHORIZED', StatusCodes.UNAUTHORIZED));
             }
 
             console.log('existingUser.role: ', existingUser);
@@ -42,9 +42,7 @@ const protectedRoutes = (req, res, next) => {
             console.log('user.role: ', user);
 
             if (user.role.title === 'Customer') {
-                return res.status(403).json({
-                    message: "Forbidden: Customers cannot access admin routes"
-                });
+                return res.status(StatusCodes.FORBIDDEN).json(Responses.ErrorResponse("Forbidden: Customers cannot access admin routes", "Forbidden", StatusCodes.FORBIDDEN));
             }
 
             console.log("Auth account: ", existingUser);
@@ -55,7 +53,7 @@ const protectedRoutes = (req, res, next) => {
 
     } catch (error) {
         console.error('Error in auth middleware:', error);
-        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(Responses.ErrorResponse('Internal Server Error auth-middleware', 'Internal Server Error', StatusCodes.INTERNAL_SERVER_ERROR));
     }
 };
 
@@ -66,7 +64,7 @@ const authenticateToken = async (req, res, next) => {
 
         if (!authHeader) {
             return res.status(StatusCodes.UNAUTHORIZED).json(
-                responses.ErrorResponse('Authorization header is required')
+                Responses.ErrorResponse('Authorization header is required', 'UNAUTHORIZED', StatusCodes.UNAUTHORIZED)
             );
         }
 
@@ -77,12 +75,14 @@ const authenticateToken = async (req, res, next) => {
             decoded = jwt.verify(token, process.env.ACCESS_KEY_SECRET);
         } catch (err) {
             return res.status(StatusCodes.UNAUTHORIZED).json(
-                responses.ErrorResponse('Invalid or expired token', 'Invalid or expired token', StatusCodes.UNAUTHORIZED)
+                Responses.ErrorResponse('Invalid or expired token', 'Invalid or expired token', StatusCodes.UNAUTHORIZED)
             );
         }
         // ✅ Lấy user details và attach vào request
         const accountDetails = await userService.getAccountDetailsWithRolePermissions(token);
         req.user = accountDetails;
+
+        console.log('Authenticated user:', req.user);
 
         next();
     } catch (error) {
@@ -90,7 +90,7 @@ const authenticateToken = async (req, res, next) => {
 
         const statusCode = error.statusCode || StatusCodes.UNAUTHORIZED;
         return res.status(statusCode).json(
-            responses.ErrorResponse(error.message, error.message || 'Authentication failed', statusCode)
+            Responses.ErrorResponse(error.message, error.message || 'Authentication failed', statusCode)
         );
     }
 };
@@ -101,7 +101,7 @@ const requirePermission = (permission) => {
         try {
             if (!req.user) {
                 return res.status(StatusCodes.UNAUTHORIZED).json(
-                    responses.ErrorResponse('User not authenticated')
+                    Responses.ErrorResponse('User not authenticated')
                 );
             }
 
@@ -109,7 +109,7 @@ const requirePermission = (permission) => {
 
             if (!hasPermission) {
                 return res.status(StatusCodes.FORBIDDEN).json(
-                    responses.ErrorResponse(`Permission '${permission}' required`)
+                    Responses.ErrorResponse(`Permission '${permission}' required`)
                 );
             }
 
@@ -117,7 +117,7 @@ const requirePermission = (permission) => {
         } catch (error) {
             console.error('Permission middleware error:', error);
             return res.status(StatusCodes.FORBIDDEN).json(
-                responses.ErrorResponse('Permission check failed')
+                Responses.ErrorResponse('Permission check failed')
             );
         }
     };
@@ -128,13 +128,13 @@ const requireAdmin = async (req, res, next) => {
     try {
         if (!req.user) {
             return res.status(StatusCodes.UNAUTHORIZED).json(
-                responses.ErrorResponse('User not authenticated')
+                Responses.ErrorResponse('User not authenticated')
             );
         }
 
         if (req.user.role.title !== 'admin') {
             return res.status(StatusCodes.FORBIDDEN).json(
-                responses.ErrorResponse('Admin access required')
+                Responses.ErrorResponse('Admin access required')
             );
         }
 
@@ -142,7 +142,7 @@ const requireAdmin = async (req, res, next) => {
     } catch (error) {
         console.error('Admin middleware error:', error);
         return res.status(StatusCodes.FORBIDDEN).json(
-            responses.ErrorResponse('Admin check failed')
+            Responses.ErrorResponse('Admin check failed')
         );
     }
 };
@@ -154,7 +154,7 @@ const allowCustomer = async (req, res, next) => {
 
         if (!authHeader) {
             return res.status(StatusCodes.UNAUTHORIZED).json(
-                responses.ErrorResponse('Authorization header is required')
+                Responses.ErrorResponse('Authorization header is required')
             );
         }
 
@@ -168,7 +168,7 @@ const allowCustomer = async (req, res, next) => {
 
         const statusCode = error.statusCode || StatusCodes.UNAUTHORIZED;
         return res.status(statusCode).json(
-            responses.ErrorResponse(error.message || 'Authentication failed')
+            Responses.ErrorResponse(error.message || 'Authentication failed')
         );
     }
 };

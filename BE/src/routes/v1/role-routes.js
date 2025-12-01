@@ -3,13 +3,13 @@ const router = express.Router();
 const {RoleController} = require('../../controllers');
 // const auth = require('../../middlewares/auth-middleware');
 const { authorize } = require('../../middlewares/rbac-middleware');
-// const { ProtectedRoutes } = require('../../middlewares/auth-middleware');
+const { ProtectedRoutes } = require('../../middlewares/auth-middleware');
 
-// router.use(ProtectedRoutes);
+router.use(ProtectedRoutes);
 
-const {authenticateToken} = require('../../middlewares/auth-middleware');
+// const {authenticateToken} = require('../../middlewares/auth-middleware');
 
-router.use(authenticateToken);
+// router.use(authenticateToken);
 
 router.get('/all', authorize('role.admin'), RoleController.getAllRoleAndPermissions);
 

@@ -16,6 +16,12 @@ function errorHandler(err, req, res, next) {
         const response = Responses.ErrorResponse('Validation Error: ' + msg);
         return res.status(StatusCodes.BAD_REQUEST).json(response);
     }
+    if (err && err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json(Responses.ErrorResponse("Only one image is allowed"," Only one image is allowed", StatusCodes.BAD_REQUEST));
+    }
+    if (err && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json(Responses.ErrorResponse("File size is too large"," File size is too large", StatusCodes.BAD_REQUEST));
+    }
 
     // Lỗi không xác định
     const response = Responses.ErrorResponse('Internal Server Error');

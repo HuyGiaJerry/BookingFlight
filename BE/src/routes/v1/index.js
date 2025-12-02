@@ -10,6 +10,7 @@ const airplaneRouter = require('./airplane-routes');
 const flightRouter = require('./flight-routes');
 const roleRouter = require('./role-routes');
 const passengerRouter = require('./passenger-routes');
+const vnpayRoute = require('./vnpay-routes');
 // const flightScheduleRouter = require('./flightschedule-routes');
 // const flightScheduleFareRouter = require('./flightschedulefare-routes');
 // const oauthRouter = require('./oauth-routes');
@@ -38,6 +39,7 @@ router.use('/airplanes', airplaneRouter);
 router.use('/flights', flightRouter);
 router.use('/roles', roleRouter)
 router.use('/accounts', accountRouter);
+router.use('/vnpay', vnpayRoute);
 // router.use('/flight-schedules', flightScheduleRouter);
 // router.use('/flight-schedule-fares', flightScheduleFareRouter);
 router.use('/flight-summary', flightSummaryRoutes);

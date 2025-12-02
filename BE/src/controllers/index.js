@@ -17,5 +17,6 @@ module.exports = {
     RoleController: require('./role-controller'),
     UploadController: require('./upload-controller'),
     SeatClassController: require('./seat-class-controller'),
-    AccountController: require('./account-controller')
+    AccountController: require('./account-controller'),
+    VnpayController: require('./vnpay-controller')
 }

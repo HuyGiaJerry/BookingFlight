@@ -221,6 +221,129 @@ class BookingService {
     generateTicketNumber(bookingCode, flightId, passengerIndex) {
         return `${bookingCode}-F${flightId}-P${(passengerIndex + 1).toString().padStart(2, '0')}`;
     }
+
+    async confirmBooking({ bookingSessionId, amount, transactionId, rawData }) {
+        // 1) Lấy session booking
+        const session = await BookingSession.findByPk(bookingSessionId);
+        if (!session) throw new Error("BookingSession not found");
+
+        const sessionData = JSON.parse(session.session_data);
+
+        const {
+            accountId,
+            contactInfo,
+            passengers,
+            selectedSeats,
+            flights
+        } = sessionData;
+
+        // 2) Tạo Booking gốc
+        const booking = await Booking.create({
+            booking_code: "BK" + Date.now(),
+            account_id: accountId,
+            contact_email: contactInfo.email,
+            contact_phone: contactInfo.phone,
+            booking_type: flights.length === 2 ? "round_trip" : "one_way",
+            total_amount: amount,
+            status: "confirmed",
+            payment_status: "paid",
+            confirmed_at: new Date()
+        });
+
+        // 3) Tạo Payment
+        await Payment.create({
+            booking_id: booking.id,
+            amount: amount,
+            payment_method: "VNPay",
+            payment_status: "paid",
+            transaction_id: transactionId,
+            gateway_response: JSON.stringify(rawData),
+            paid_at: new Date()
+        });
+
+        // 4) Tạo BookingFlight
+        const bookingFlightRecords = [];
+        for (const f of flights) {
+            const record = await BookingFlight.create({
+                booking_id: booking.id,
+                flight_schedule_id: f.flightScheduleId,
+                flight_type: f.type
+            });
+            bookingFlightRecords.push(record);
+        }
+
+        // 5) Tạo BookingPassenger
+        const passengerRecords = [];
+
+        for (const p of passengers) {
+            const passenger = await BookingPassenger.create({
+                booking_id: booking.id,
+                fullname: p.fullname,
+                gender: p.gender,
+                date_of_birth: p.dateOfBirth,
+                passenger_type: p.type,
+                nationality: p.nationality,
+                passport_number: p.passportNumber,
+            });
+
+            passengerRecords.push(passenger);
+        }
+
+        // 6) Tạo BookingPassengerFlight + Ticket + update seat
+        for (let i = 0; i < passengers.length; i++) {
+            const pax = passengerRecords[i];
+
+            for (const f of bookingFlightRecords) {
+                const seatInfo = selectedSeats.find(
+                    s => s.flightScheduleId === f.flight_schedule_id && s.passengerIndex === i
+                );
+
+                const selectedSeat = await FlightSeat.findByPk(seatInfo.flightSeatId);
+
+                // Mark seat as booked
+                await selectedSeat.update({
+                    status: "booked",
+                    blocked_by_session_id: null,
+                    blocked_until: null
+                });
+
+                // Create BookingPassengerFlight
+                const bpf = await BookingPassengerFlight.create({
+                    booking_passenger_id: pax.id,
+                    booking_flight_id: f.id,
+                    flight_schedule_id: f.flight_schedule_id,
+                    flight_seat_id: selectedSeat.id,
+                    seat_number: seatInfo.seatNumber,
+                    seat_class_id: seatInfo.seatClassId,
+                    fare_class: seatInfo.fareClass,
+                    fare_price: seatInfo.price,
+                    tax: seatInfo.tax,
+                });
+
+                // Create Ticket
+                await Ticket.create({
+                    ticket_number: "T" + Date.now() + "_" + pax.id,
+                    booking_id: booking.id,
+                    booking_flight_id: f.id,
+                    passenger_id: pax.id,
+                    flight_seat_id: selectedSeat.id,
+                    fare_class_name: seatInfo.fareClass,
+                    seat_number: seatInfo.seatNumber,
+                    base_fare: seatInfo.price,
+                    tax: seatInfo.tax,
+                    service_fee: 0,
+                    total_amount: seatInfo.price + seatInfo.tax
+                });
+            }
+        }
+
+        // 7) Xóa booking session
+        await BookingSession.destroy({
+            where: { id: bookingSessionId }
+        });
+
+        return { bookingId: booking.id };
+    }
 }
 
 module.exports = BookingService;

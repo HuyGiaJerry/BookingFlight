@@ -30,13 +30,13 @@ class SeatSelectionService {
             const session = await SessionManagerService.getUnifiedSession(booking_session_id);
 
             if (!session) {
-                throw new AppError('Session not found. Please start from flight selection.', 404);
+                throw new AppError('Session not found.', 404);
             }
 
-            // ✅ Validate session chứa flight selections
+            // ✅ Validate session chứa flights 
             const sessionData = session.session_data || {};
-            if (!sessionData.flight_selections) {
-                throw new AppError('Invalid session. Please start from flight selection.', 400);
+            if (!sessionData.flights) {
+                throw new AppError('Invalid session.', 400);
             }
 
             // ✅ Validate seat availability
@@ -45,19 +45,19 @@ class SeatSelectionService {
                 throw new AppError('Seat is not available', 400);
             }
 
-            // ✅ Release previous seat
+            // ✅ Xóa , Cập nhật lại cái status,các trường khác... của ghế cũ (nếu có)
             await this.releaseSeatForPassenger(session.id, flight_schedule_id, passenger_index);
 
-            // ✅ Block new seat
+            // ✅ Block ghế mới chọn 15p 
             const blocked = await this.seatRepository.blockSeats([flight_seat_id], session.id, 15);
             if (blocked !== 1) {
                 throw new AppError('Unable to block seat', 500);
             }
 
-            // ✅ Update passenger seat trong session
+            // ✅ Cập nhật sesion_data với ghế mới
             const updatedSession = await this.updatePassengerSeatInSession(session, flight_schedule_id, passenger_index, flight_seat_id);
 
-            // ✅ Recalculate pricing
+            // ✅ Tính toán lại pricing
             const flightPricing = await this.recalculateFlightPricing(updatedSession, flight_schedule_id);
             const sessionTotals = await SessionManagerService.calculateUnifiedTotal(updatedSession);
 
@@ -252,7 +252,7 @@ class SeatSelectionService {
             // ✅ RAW SQL UPDATE
             const jsonData = JSON.stringify(currentData);
             const expireAt = new Date(Date.now() + 15 * 60000);
-
+            
             await session.sequelize.query(`
                 UPDATE BookingSessions 
                 SET session_data = :sessionData, 
@@ -512,7 +512,6 @@ class SeatSelectionService {
                 seat_summary: seatSummary,
                 booking_ready: true,
                 expires_at: session.expire_at,
-                redirect_url: `/booking?session_id=${sessionId}`
             };
 
         } catch (error) {

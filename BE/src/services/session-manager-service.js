@@ -191,14 +191,12 @@ class SessionManagerService {
             const sessionData = session.session_data || {};
 
             return {
-                session_id: sessionId,
-                account_id: session.account_id,
-                flight_selections: sessionData.flight_selections || {}, // ✅ THÊM flight_selections
-                seat_selections: sessionData.seat_selections || {},
-                service_selections: sessionData.service_selections || {},
+                session_data: sessionData,
                 total_estimate: session.total_estimate,
                 expires_at: session.expire_at,
-                session_age_minutes: Math.round((new Date() - new Date(sessionData.created_at)) / 60000)
+                session_age_minutes: sessionData.created_at
+                    ? Math.round((new Date() - new Date(sessionData.created_at)) / 60000)
+                    : null
             };
 
         } catch (error) {

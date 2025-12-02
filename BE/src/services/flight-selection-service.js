@@ -61,7 +61,7 @@ class FlightSelectionService {
                 return_flight_id = null,
                 passengers = [],
                 seat_class_name,
-                service_selection = [],
+                service_selection = {},
                 fare_price = null,
                 account_id = null
             } = payload;
@@ -107,7 +107,7 @@ class FlightSelectionService {
                 },
                 passengers: normalizedPassengers,   // ✅ dùng type ADULT/CHILDREN/INFANT
                 passenger_details: [],
-                seat_selections: [],
+                seat_selections: {},
                 service_selection,
                 fare_price
             };

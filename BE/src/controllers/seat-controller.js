@@ -6,6 +6,24 @@ class SeatController {
         this.seatService = new SeatService();
     }
 
+    getSeatMapFE = async (req, res) => {
+        const flightScheduleId = parseInt(req.query.flightScheduleId);
+        const seatClassId = req.query.classId ? parseInt(req.query.classId) : null;
+
+        const result = await this.seatService.getSeatLayoutForFrontend(
+            flightScheduleId,
+            seatClassId       // FIXED: truyền id, không phải code
+        );
+
+        return res.status(200).json({
+            success: true,
+            data: result
+        });
+    };
+
+
+
+
     /**
      * ✅ UPDATED: Get seat matrix với class filter
      * 🔸 GET /api/v1/seats/matrix/:flightScheduleId?classId=1

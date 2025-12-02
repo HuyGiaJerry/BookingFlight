@@ -11,6 +11,50 @@ class SeatService {
     /**
      * ✅ UPDATED: Get Traveloka seat matrix với class filter
      */
+
+    detectAisles(columns, seatMap) {
+        const aisleIndexes = [];
+
+        for (let i = 0; i < columns.length - 1; i++) {
+            const colLeft = columns[i];
+            const colRight = columns[i + 1];
+
+            const leftHasAisle = seatMap.some(
+                s => s.seat_column === colLeft && s.is_aisle
+            );
+            const rightHasAisle = seatMap.some(
+                s => s.seat_column === colRight && s.is_aisle
+            );
+
+            // Nếu ghế ở cả 2 cột đều sát lối đi -> lối đi nằm giữa
+            if (leftHasAisle && rightHasAisle) {
+                aisleIndexes.push(i + 1);
+                // => ví dụ C (index 2) và D (index 3) -> aisle = 3
+            }
+        }
+
+        return aisleIndexes;
+    }
+
+    debugAisles(columns, seatMap, aisles) {
+        console.log("\n====== AISLE DEBUG ======");
+
+        console.log("Columns:", columns);
+        console.log("Detected aisles (indexes):", aisles);
+        aisles.forEach(a => {
+            console.log(` -> Aisle nằm giữa ${columns[a - 1]} | ${columns[a]}`);
+        });
+
+        console.log("\nSeat window/aisle flags per column:");
+        columns.forEach(col => {
+            const seatsInCol = seatMap.filter(s => s.seat_column === col);
+            const hasAisleSeat = seatsInCol.some(s => s.is_aisle);
+            console.log(` - Column ${col}: is_aisle = ${hasAisleSeat}`);
+        });
+
+        console.log("==========================\n");
+    }
+
     async getTravelokaSeatMatrix(flightScheduleId, seatClassId = null) {
         try {
             console.log('🚀 Getting Traveloka seat matrix for flight:', flightScheduleId, 'class:', seatClassId);
@@ -473,6 +517,78 @@ class SeatService {
 
         return layout;
     }
-}
 
+
+
+    async getSeatLayoutForFrontend(flightScheduleId, seatClass = null) {
+        const seatMapData = await this.seatRepository.getFlightSeatMap(
+            flightScheduleId
+        );
+
+
+
+        const { seat_map, airplane } = seatMapData;
+
+        if (!seat_map || seat_map.length === 0) {
+            return { seats: [], layout: {}, seatTypes: [] };
+        }
+
+        // Lấy danh sách cột A B C D E F từ DB
+        const columns = [...new Set(seat_map.map(s => s.seat_column))].sort();
+
+        // Lấy số row tối đa
+        const totalRows = Math.max(...seat_map.map(s => s.seat_row));
+
+        const aisleIndexes = this.detectAisles(columns, seat_map);
+
+        this.debugAisles(columns, seat_map, aisleIndexes);
+
+        // Tạo layout FE
+        const layout = {
+            rows: totalRows,
+            columns,
+            aisles: aisleIndexes // bạn tự set hoặc detect
+        };
+
+        // Build seatTypes theo price_adjustment
+        const seatTypes = this.buildSeatTypes();
+
+        // Build danh sách seats FE
+        const seats = seat_map.map(seat => ({
+            flightSeatId: seat.seat_id,
+            seatNumber: seat.seat_number,
+            row: seat.seat_row,
+            column: seat.seat_column,
+            typeCode: this.getTypeCodeFromAdjustment(seat.price_adjustment, seat.seat_class.class_code),
+            status: seat.status.toUpperCase(),
+            seat_class : seat.seat_class,
+            priceAdjustment: parseFloat(seat.price_adjustment) || 0
+        }));
+
+
+
+        return { layout, seats, seatTypes };
+    }
+    buildSeatTypes() {
+        return [
+            { code: "STD", label: "Ghế thường", price: 0, color: "#3b82f6" },
+            { code: "LOW", label: "Low price", price: 20000, color: "#22c55e" },
+            { code: "PREM", label: "Premium", price: 50000, color: "#f97316" },
+            { code: "EXIT", label: "Exit Row", price: 35000, color: "#ff9800" }
+        ];
+    }
+
+    getTypeCodeFromAdjustment(adjustment, classCode) {
+        if (adjustment === 0) return "STD";
+        if (adjustment <= 25000) return "LOW";
+        if (adjustment <= 50000) return "PREM";
+        return "PREM";
+    }
+
+
+
+
+
+
+}
 module.exports = SeatService;

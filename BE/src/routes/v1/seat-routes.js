@@ -13,4 +13,6 @@ router.get('/class/:flightScheduleId/:classId', seatController.getSeatsByClass);
 router.get('/debug/:flightScheduleId', seatController.debugSeatLayout); // ?classId=1 optional
 router.post('/check-availability', seatController.checkSeatAvailability);
 
+router.get('/frontend', seatController.getSeatMapFE);
+
 module.exports = router;

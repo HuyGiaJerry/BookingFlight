@@ -8,27 +8,24 @@ class FlightSelectionController {
     }
 
     /**
-     * 🛫 CREATE: Tạo session từ flight selection
+     * 🛫 CREATE: Tạo Booking Session từ flight selection
      * POST /api/v1/flight-selection/create-session
      */
-    createFlightSelectionSession = async (req, res) => {
+    createFlightSelectionSession = async (req, res ,next) => {
         try {
             const payload = req.body;
 
-            if (!payload.outbound_flight_id || !payload.passengers_count || !payload.seat_class_id) {
-                return res.status(StatusCodes.BAD_REQUEST).json({
-                    success: false,
-                    message: 'outbound_flight_id, passengers_count, and seat_class_id are required'
-                });
+            if (!payload.outbound_flight_id || !payload.seat_class_id) {
+                return res.status(StatusCodes.BAD_REQUEST).json(Responses.ErrorResponse('outbound_flight_id and seat_class_id are required','outbound_flight_id and seat_class_id are required',StatusCodes.BAD_REQUEST));
             }
 
-            const result = await this.flightSelectionService.createFlightSelectionSession(payload);
+            const result =await this.flightSelectionService.createFlightSelectionSession(payload);
 
-            return res.status(StatusCodes.CREATED).json(Responses.SuccessResponse(result, 'BoookingSession created successfully',StatusCodes.CREATED));
-
+            // { booking_session_id, session_data, expires_at }
+            return res.status(StatusCodes.CREATED).json(Responses.SuccessResponse( result,'BookingSession created successfully', StatusCodes.CREATED ));
         } catch (error) {
             console.error('Error creating flight selection session:', error);
-            return res.status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json(Responses.ErrorResponse(error.message || 'Failed to create flight selection session'));
+            next(error);
         }
     };
 }

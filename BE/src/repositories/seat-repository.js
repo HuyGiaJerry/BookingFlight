@@ -1,5 +1,5 @@
 const CrudRepository = require('./crud-repository');
-const { FlightSeat, SeatLayout, SeatClass, FlightSchedule, Airplane, Ticket } = require('../models');
+const { FlightSeat, SeatLayout, SeatClass, FlightSchedule, Airplane, Ticket      } = require('../models');
 const { Op, Sequelize } = require('sequelize');
 
 class SeatRepository extends CrudRepository {
@@ -8,8 +8,9 @@ class SeatRepository extends CrudRepository {
     }
 
     // ✅ UPDATED: Get airplane seat layout with class filter
-    async getFlightSeatMap(flightScheduleId, seatClassId = null) {
+    async getFlightSeatMap(flightScheduleId) {
         try {
+
             const flightSchedule = await FlightSchedule.findByPk(flightScheduleId, {
                 include: [
                     {
@@ -28,11 +29,6 @@ class SeatRepository extends CrudRepository {
             const seatLayoutWhere = {
                 airplane_id: flightSchedule.airplane_id
             };
-
-            // ✅ THÊM: Filter by seat class nếu có
-            if (seatClassId) {
-                seatLayoutWhere.seat_class_id = seatClassId;
-            }
 
             // Get seat layout for this airplane (filtered by class if provided)
             const seatLayouts = await SeatLayout.findAll({
@@ -82,7 +78,11 @@ class SeatRepository extends CrudRepository {
                     seat_number: layout.seat_number,
                     seat_row: layout.seat_row,
                     seat_column: layout.seat_column,
-                    seat_class: layout.seatClass,
+                    seat_class: {
+                        id: layout.seatClass.id,
+                        class_name: layout.seatClass.class_name.toUpperCase(),
+                        class_code: layout.seatClass.class_code.toUpperCase()
+                    },
                     is_window: layout.is_window,
                     is_aisle: layout.is_aisle,
                     is_exit_row: layout.is_exit_row,

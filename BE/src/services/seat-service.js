@@ -575,7 +575,8 @@ class SeatService {
                 seatNumber: seat.seat_number,
                 row: seat.seat_row,
                 column: seat.seat_column,
-                typeCode: seat.type_code,
+                typeSeat: seat.type_code,
+                typeCode: this.getTypeCodeFromAdjustment(seat.price_adjustment),
                 status: isClassMatched ? seat.status.toUpperCase() : "NOT_IN_CLASS",
                 seat_class: seat.seat_class,
                 priceAdjustment: seat.price_adjustment
@@ -595,17 +596,11 @@ class SeatService {
         ];
     }
 
-    getTypeCodeFromAdjustment(adjustment, classCode) {
+    getTypeCodeFromAdjustment(adjustment) {
         if (adjustment === 0) return "STD";
         if (adjustment <= 25000) return "LOW";
         if (adjustment <= 50000) return "PREM";
         return "PREM";
     }
-
-
-
-
-
-
 }
 module.exports = SeatService;

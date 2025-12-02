@@ -150,16 +150,25 @@ async function fullSearch(req, res) {
 
             // Xử lý filter + sort
             const processed = applyFiltersAndSorting(cached, req.query)
+            const responseData = {
+                flights: processed.flights,              // chỉ giữ flights
+                airlineData: processed.airlineData,
+                durationRange: processed.durationRange,
+                minPrice: processed.minPrice,
+                maxPrice: processed.maxPrice,
+                durationMin: processed.durationMin
+            };
 
-            return res.json({
+            return res.status(200).json({
                 success: true,
-                data: processed,
+                data: responseData,
                 meta: {
-                    total: processed.length,
+                    total: responseData.flights.length,
                     query: req.query,
                     timestamp: new Date().toISOString()
                 }
-            })
+            });
+
         }
         console.log('callback full search')
 
@@ -172,15 +181,25 @@ async function fullSearch(req, res) {
 
         const processed = applyFiltersAndSorting(data, req.query);
 
+        const responseData = {
+            flights: processed.flights,              // chỉ giữ flights
+            airlineData: processed.airlineData,
+            durationRange: processed.durationRange,
+            minPrice: processed.minPrice,
+            maxPrice: processed.maxPrice,
+            durationMin: processed.durationMin
+        };
+
         return res.status(200).json({
             success: true,
-            data: processed,
+            data: responseData,
             meta: {
-                total: processed.flights.length,
+                total: responseData.flights.length,
                 query: req.query,
                 timestamp: new Date().toISOString()
             }
         });
+
     } catch (error) {
         console.error('Flight search error:', error);
         return res.status(400).json({

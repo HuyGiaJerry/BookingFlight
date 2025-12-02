@@ -79,7 +79,7 @@ class SeatRepository extends CrudRepository {
                     seat_row: layout.seat_row,
                     seat_column: layout.seat_column,
                     seat_class: {
-                        id: layout.seatClass.id,
+                        id: layout.seatClass.id,    
                         class_name: layout.seatClass.class_name.toUpperCase(),
                         class_code: layout.seatClass.class_code.toUpperCase()
                     },

@@ -1,26 +1,50 @@
 
+// function applyFiltersAndSorting(rawData, query) {
+//     // one way
+//     console.log('raw data', rawData.flights)
+//     if (rawData.flights) {
+//         return {
+//             ...rawData,
+//             flights: FiltersAndSortList(rawData.flights, query)
+//         }
+//     }
+
+//     // round trip
+//     console.log('raw data outbound', rawData.outbound.flights)
+//     console.log('raw data inbound', rawData.inbound.flights)
+//     if (rawData.outbound && rawData.inbound) {
+//         return {
+//             ...rawData,
+//             outbound: FiltersAndSortList(rawData.outbound.flights, query),
+//             inbound: FiltersAndSortList(rawData.inbound.flights, query)
+//         }
+//     }
+//     return rawData
+// }
 function applyFiltersAndSorting(rawData, query) {
-    // one way
-    console.log('raw data', rawData.flights)
+    console.log('raw data:', rawData);
+
+    // ONE WAY CASE
     if (rawData.flights) {
         return {
+            
             ...rawData,
             flights: FiltersAndSortList(rawData.flights, query)
-        }
+        };
     }
 
-    // round trip
-    console.log('raw data outbound', rawData.outbound.flights)
-    console.log('raw data inbound', rawData.inbound.flights)
+    // ROUND TRIP CASE
     if (rawData.outbound && rawData.inbound) {
         return {
             ...rawData,
             outbound: FiltersAndSortList(rawData.outbound.flights, query),
             inbound: FiltersAndSortList(rawData.inbound.flights, query)
-        }
+        };
     }
-    return rawData
+
+    return rawData;
 }
+
 function FiltersAndSortList(flightsList, query) {
     let flights = [...flightsList];
 
@@ -86,9 +110,7 @@ function FiltersAndSortList(flightsList, query) {
         });
     }
 
-    return {
-        flights
-    };
+    return flights;
 }
 function toTimestamp(date, time) {
     return new Date(

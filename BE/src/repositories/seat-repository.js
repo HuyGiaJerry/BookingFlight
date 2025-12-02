@@ -1,6 +1,6 @@
 const CrudRepository = require('./crud-repository');
-const { FlightSeat, SeatLayout, SeatClass, FlightSchedule, Airplane, Ticket      } = require('../models');
-const { Op, Sequelize } = require('sequelize');
+const { FlightSeat, SeatLayout, SeatClass, FlightSchedule, Airplane, Ticket } = require('../models');
+const { Op, Sequelize, where } = require('sequelize');
 
 class SeatRepository extends CrudRepository {
     constructor() {
@@ -37,7 +37,7 @@ class SeatRepository extends CrudRepository {
                     {
                         model: SeatClass,
                         as: 'seatClass',
-                        attributes: ['id', 'class_name', 'class_code']
+                        attributes: ['id', 'class_name', 'class_code'],
                     }
                 ],
                 order: [['seat_row', 'ASC'], ['seat_column', 'ASC']]
@@ -79,7 +79,7 @@ class SeatRepository extends CrudRepository {
                     seat_row: layout.seat_row,
                     seat_column: layout.seat_column,
                     seat_class: {
-                        id: layout.seatClass.id,    
+                        id: layout.seatClass.id,
                         class_name: layout.seatClass.class_name.toUpperCase(),
                         class_code: layout.seatClass.class_code.toUpperCase()
                     },

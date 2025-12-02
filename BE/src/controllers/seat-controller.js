@@ -8,11 +8,12 @@ class SeatController {
 
     getSeatMapFE = async (req, res) => {
         const flightScheduleId = parseInt(req.query.flightScheduleId);
-        const seatClassId = req.query.classId ? parseInt(req.query.classId) : null;
+        const seatClassName = req.query.seatClass;
 
+        console.log("seatClassName: ", seatClassName)
         const result = await this.seatService.getSeatLayoutForFrontend(
             flightScheduleId,
-            seatClassId       // FIXED: truyền id, không phải code
+            seatClassName
         );
 
         return res.status(200).json({

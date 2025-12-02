@@ -520,7 +520,7 @@ class SeatService {
 
 
 
-    async getSeatLayoutForFrontend(flightScheduleId, seatClass = null) {
+    async getSeatLayoutForFrontend(flightScheduleId, seatClassName = null) {
         const seatMapData = await this.seatRepository.getFlightSeatMap(
             flightScheduleId
         );
@@ -554,16 +554,33 @@ class SeatService {
         const seatTypes = this.buildSeatTypes();
 
         // Build danh sách seats FE
-        const seats = seat_map.map(seat => ({
-            flightSeatId: seat.seat_id,
-            seatNumber: seat.seat_number,
-            row: seat.seat_row,
-            column: seat.seat_column,
-            typeCode: this.getTypeCodeFromAdjustment(seat.price_adjustment, seat.seat_class.class_code),
-            status: seat.status.toUpperCase(),
-            seat_class : seat.seat_class,
-            priceAdjustment: parseFloat(seat.price_adjustment) || 0
-        }));
+        // const seats = seat_map.map(seat => ({
+
+        //     flightSeatId: seat.seat_id,
+        //     seatNumber: seat.seat_number,
+        //     row: seat.seat_row,
+        //     column: seat.seat_column,
+        //     typeCode: this.getTypeCodeFromAdjustment(seat.price_adjustment, seat.seat_class.class_code),
+        //     status: seat.status.toUpperCase(),
+        //     seat_class : seat.seat_class,
+        //     priceAdjustment: parseFloat(seat.price_adjustment) || 0
+        // }));
+
+        let seats = seat_map.map(seat => {
+            const isClassMatched =
+                !seatClassName || seat.seat_class.class_name === seatClassName;
+
+            return {
+                flightSeatId: seat.id,
+                seatNumber: seat.seat_number,
+                row: seat.seat_row,
+                column: seat.seat_column,
+                typeCode: seat.type_code,
+                status: isClassMatched ? seat.status.toUpperCase() : "NOT_IN_CLASS",
+                seat_class: seat.seat_class,
+                priceAdjustment: seat.price_adjustment
+            };
+        });
 
 
 

@@ -3,6 +3,7 @@ const express = require('express');
 
 const { HomeController } = require('../../controllers');
 const authRouter = require('./auth-routes');
+const accountRouter = require('./account-routes');
 const airportRouter = require('./airport-routes');
 const airlineRouter = require('./airline-routes');
 const airplaneRouter = require('./airplane-routes');
@@ -37,6 +38,7 @@ router.use('/airlines', airlineRouter);
 router.use('/airplanes', airplaneRouter);
 router.use('/flights', flightRouter);
 router.use('/roles', roleRouter)
+router.use('/accounts', accountRouter);
 // router.use('/flight-schedules', flightScheduleRouter);
 // router.use('/flight-schedule-fares', flightScheduleFareRouter);
 router.use('/flight-summary', flightSummaryRoutes);

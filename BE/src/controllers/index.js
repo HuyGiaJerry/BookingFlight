@@ -18,4 +18,5 @@ module.exports = {
     UploadController: require('./upload-controller'),
     SeatClassController: require('./seat-class-controller'),
     BookingSessionController: require('./booking-session-controller'),
+    AccountController: require('./account-controller')
 }

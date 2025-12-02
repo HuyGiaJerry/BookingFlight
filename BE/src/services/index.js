@@ -23,4 +23,5 @@ module.exports = {
     FlightSelectionService: require('./flight-selection-service'),
     UploadService: require('./upload-service'),
     SeatClassService: require('./seat-class-service'),
+    AccountService: require('./account-service')
 }

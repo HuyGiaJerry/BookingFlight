@@ -1,5 +1,6 @@
 const CrudRepository = require('./crud-repository');
 const { Account, Role, RolePermission } = require('../models');
+const { where, Op } = require('sequelize');
 class UserRepository extends CrudRepository {
   constructor() {
     super(Account);
@@ -61,6 +62,25 @@ class UserRepository extends CrudRepository {
   }
   findWithPassword(email) {
     return Account.findOne({ where: { email } });
+  }
+  async getAccount() {
+    try {
+      const account = await this.model.findAll({
+        attributes: ['id', 'fullname', 'avatar', 'status'],
+        include: [
+          {
+            model: Role,
+            as: 'role',
+            attributes: ['title'],
+            where: { title: { [Op.ne]: 'Customer' } }
+          }
+        ],
+      });
+      return account;
+    } catch (error) {
+      console.error('Error in getAccount:', error);
+      throw error;
+    }
   }
 }
 

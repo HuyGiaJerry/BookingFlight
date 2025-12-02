@@ -33,17 +33,11 @@ class SeatCleanupService {
                 return { released: 0, message: 'No expired seats' };
             }
 
-            console.log(`🎯 Found ${expiredSeats.length} expired seats:`, expiredSeats.map(s => ({
-                id: s.id,
-                session: s.blocked_session_id,
-                expired_at: s.blocked_until
-            })));
-
             // ✅ BULK UPDATE expired seats to available
             const [updatedCount] = await FlightSeat.update({
                 status: 'available',
-                blocked_session_id: null,    // ✅ Clear session
-                blocked_at: null,            // ✅ Clear timestamps  
+                blocked_session_id: null,
+                blocked_at: null,
                 blocked_until: null
             }, {
                 where: {
@@ -53,6 +47,9 @@ class SeatCleanupService {
                     }
                 }
             });
+
+            // ✅ GỌI cleanupSessionDataForReleasedSeats để cập nhật session_data và total_estimate
+            await this.cleanupSessionDataForReleasedSeats(expiredSeats.map(s => s.id));
 
             console.log(`✅ Released ${updatedCount} expired seats`);
             console.log('🧹 === AUTO-CLEANUP EXPIRED SEATS END ===');
@@ -301,6 +298,51 @@ class SeatCleanupService {
         } catch (error) {
             console.error('Error in manual session cleanup:', error);
             throw error;
+        }
+    }
+
+    /**
+     * ✅ THÊM: Cleanup dữ liệu seat_selections cho các session còn sống có chứa seat_id được release
+     */
+    async cleanupSessionDataForReleasedSeats(releasedSeatIds) {
+        if (!releasedSeatIds || releasedSeatIds.length === 0) return;
+
+        const sessions = await BookingSession.findAll({
+            where: {
+                expire_at: { [Op.gt]: new Date() }
+            }
+        });
+
+        for (const session of sessions) {
+            let updated = false;
+            const data = session.session_data || {};
+            if (!data.seat_selections) continue;
+
+            for (const [flightId, selection] of Object.entries(data.seat_selections)) {
+                const before = selection.passenger_selections.length;
+                selection.passenger_selections = selection.passenger_selections.filter(
+                    p => !releasedSeatIds.includes(p.flight_seat_id)
+                );
+                if (selection.passenger_selections.length !== before) {
+                    updated = true;
+                    console.log(`🧹 Session ${session.id}: Removed released seats from flight ${flightId}`);
+                }
+                if (selection.passenger_selections.length === 0) {
+                    selection.seat_pricing = { seats: [], total_seat_adjustment: 0 };
+                }
+            }
+
+            if (updated) {
+                let totalSeatCharges = 0;
+                for (const selections of Object.values(data.seat_selections)) {
+                    totalSeatCharges += selections.seat_pricing?.total_seat_adjustment || 0;
+                }
+                await session.update({
+                    session_data: data,
+                    total_estimate: totalSeatCharges
+                });
+                console.log(`🧹 Session ${session.id}: Updated total_estimate to ${totalSeatCharges}`);
+            }
         }
     }
 }

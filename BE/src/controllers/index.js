@@ -18,5 +18,7 @@ module.exports = {
     UploadController: require('./upload-controller'),
     SeatClassController: require('./seat-class-controller'),
     AccountController: require('./account-controller'),
-    VnpayController: require('./vnpay-controller')
+    VnpayController: require('./vnpay-controller'),
+    BookingSessionController: require('./booking-session-controller'),
+    AccountController: require('./account-controller')
 }

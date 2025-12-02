@@ -14,7 +14,7 @@ class FlightSelectionService {
                     model: Flight,
                     as: 'flight',
                     include: [
-                        { model: Airline , as: 'airline' },
+                        { model: Airline, as: 'airline' },
                         { model: Airport, as: 'departureAirport' },
                         { model: Airport, as: 'arrivalAirport' }
                     ]
@@ -60,7 +60,7 @@ class FlightSelectionService {
                 outbound_flight_id,
                 return_flight_id = null,
                 passengers = [],
-                seat_class_id,
+                seat_class_name,
                 service_selection = [],
                 fare_price = null,
                 account_id = null
@@ -68,14 +68,19 @@ class FlightSelectionService {
 
             console.log('🛫 Creating flight selection session...');
 
-            if (!outbound_flight_id || !seat_class_id) {
+            if (!outbound_flight_id || !seat_class_name) {
                 throw new AppError(
-                    'outbound_flight_id and seat_class_id are required',
+                    'outbound_flight_id and seat_class_name are required',
                     400
                 );
             }
 
-            // 🔹 BE TỰ LẤY flight summary
+            // OPTIONAL: chuẩn hóa type passenger (nếu bạn muốn ép về 3 giá trị này)
+            const normalizedPassengers = passengers.map(p => ({
+                ...p,
+                type: (p.type || '').toUpperCase() // ADULT / CHILDREN / INFANT
+            }));
+
             const outbound_flight_summary = await this.buildFlightSummary(
                 outbound_flight_id
             );
@@ -95,12 +100,12 @@ class FlightSelectionService {
                 flights: {
                     outbound_flight_id,
                     return_flight_id,
-                    seat_class_id,
+                    seat_class_name, // ✅ lưu tên class
                     trip_type: return_flight_id ? 'round_trip' : 'one_way',
                     outbound_flight_summary,
                     return_flight_summary
                 },
-                passengers,
+                passengers: normalizedPassengers,   // ✅ dùng type ADULT/CHILDREN/INFANT
                 passenger_details: [],
                 seat_selections: [],
                 service_selection,

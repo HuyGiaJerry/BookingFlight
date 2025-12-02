@@ -10,27 +10,24 @@ const flightSelectionController = new FlightSelectionController();
 
 // POST /api/v1/flight-selection/create-session
 // Body example:
+
 // {
 //   "outbound_flight_id": 123,
 //   "return_flight_id": 456,
-//   "seat_class_id": 1,
+//   "seat_class_name": "ECONOMY",
 //   "passengers": [
-//     { "type": "ADT", "count": 1 },
-//     { "type": "CHD", "count": 1 },
-//     { "type": "INF", "count": 0 }
+//     { "type": "ADULT", "count": 1 },
+//     { "type": "CHILDREN", "count": 1 },
+//     { "type": "INFANT", "count": 0 }
 //   ],
 //   "fare_price": {
-//     "base_price": 1500000,
-//     "service_fee": 150000,
-//     "tax": 150000,
-//     "total_price": 1800000
-//   },
-//   "service_selection": [],
-//   "account_id": 789 // Optional: If the user is logged in
+//         "base_price": 1500000,
+//         "service_fee": 150000,
+//         "tax": 150000,
+//         "total_price": 1800000
+//    }
 // }
-router.post(
-    '/create-session',
-    flightSelectionController.createFlightSelectionSession
-);
+
+router.post('/create-session', flightSelectionController.createFlightSelectionSession);
 
 module.exports = router;

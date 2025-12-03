@@ -227,20 +227,37 @@ class BookingService {
         const session = await BookingSession.findByPk(bookingSessionId);
         if (!session) throw new Error("BookingSession not found");
 
-        const sessionData = JSON.parse(session.session_data);
+        // Nếu session_data là object, không cần parse
+        const sessionData = typeof session.session_data === 'string'
+            ? JSON.parse(session.session_data)
+            : session.session_data;
 
-        const {
-            accountId,
-            contactInfo,
-            passengers,
-            selectedSeats,
-            flights
-        } = sessionData;
+        // Lấy đúng trường
+        const contactInfo = sessionData.contact_info;
+        const passengers = sessionData.passenger_details || [];
+        const flightsObj = sessionData.flights || {};
+        const seatSelections = sessionData.seat_selections || {};
+        const serviceSelection = sessionData.service_selection || {};
+
+        // Xử lý flights thành array
+        const flights = [];
+        if (flightsObj.outbound_flight_id) {
+            flights.push({
+                flightScheduleId: flightsObj.outbound_flight_id,
+                type: 'outbound'
+            });
+        }
+        if (flightsObj.return_flight_id) {
+            flights.push({
+                flightScheduleId: flightsObj.return_flight_id,
+                type: 'return'
+            });
+        }
 
         // 2) Tạo Booking gốc
         const booking = await Booking.create({
             booking_code: "BK" + Date.now(),
-            account_id: accountId,
+            account_id: session.account_id,
             contact_email: contactInfo.email,
             contact_phone: contactInfo.phone,
             booking_type: flights.length === 2 ? "round_trip" : "one_way",
@@ -274,50 +291,39 @@ class BookingService {
 
         // 5) Tạo BookingPassenger
         const passengerRecords = [];
-
         for (const p of passengers) {
             const passenger = await BookingPassenger.create({
                 booking_id: booking.id,
                 fullname: p.fullname,
-                gender: p.gender,
-                date_of_birth: p.dateOfBirth,
-                passenger_type: p.type,
-                nationality: p.nationality,
-                passport_number: p.passportNumber,
+                gender: p.gender || null,
+                date_of_birth: p.date_of_birth,
+                passenger_type: p.passenger_type,
+                nationality: p.nationality || null,
+                passport_number: p.passport_number || null,
             });
-
             passengerRecords.push(passenger);
         }
 
-        // 6) Tạo BookingPassengerFlight + Ticket + update seat
-        for (let i = 0; i < passengers.length; i++) {
+        // 6) Tạo Ticket và update seat
+        for (let i = 0; i < passengerRecords.length; i++) {
             const pax = passengerRecords[i];
-
             for (const f of bookingFlightRecords) {
-                const seatInfo = selectedSeats.find(
-                    s => s.flightScheduleId === f.flight_schedule_id && s.passengerIndex === i
+                const seatSelection = seatSelections[f.flight_schedule_id];
+                if (!seatSelection) continue;
+                const passengerSeat = seatSelection.passenger_selections.find(
+                    s => s.passenger_index === i
                 );
-
-                const selectedSeat = await FlightSeat.findByPk(seatInfo.flightSeatId);
+                if (!passengerSeat) continue;
+                const seatPricing = seatSelection.seat_pricing.seats.find(
+                    s => s.passenger_index === i
+                );
+                const selectedSeat = await FlightSeat.findByPk(passengerSeat.flight_seat_id);
 
                 // Mark seat as booked
                 await selectedSeat.update({
                     status: "booked",
-                    blocked_by_session_id: null,
+                    blocked_session_id: null,
                     blocked_until: null
-                });
-
-                // Create BookingPassengerFlight
-                const bpf = await BookingPassengerFlight.create({
-                    booking_passenger_id: pax.id,
-                    booking_flight_id: f.id,
-                    flight_schedule_id: f.flight_schedule_id,
-                    flight_seat_id: selectedSeat.id,
-                    seat_number: seatInfo.seatNumber,
-                    seat_class_id: seatInfo.seatClassId,
-                    fare_class: seatInfo.fareClass,
-                    fare_price: seatInfo.price,
-                    tax: seatInfo.tax,
                 });
 
                 // Create Ticket
@@ -325,14 +331,17 @@ class BookingService {
                     ticket_number: "T" + Date.now() + "_" + pax.id,
                     booking_id: booking.id,
                     booking_flight_id: f.id,
-                    passenger_id: pax.id,
+                    booking_passenger_id: pax.id,
                     flight_seat_id: selectedSeat.id,
-                    fare_class_name: seatInfo.fareClass,
-                    seat_number: seatInfo.seatNumber,
-                    base_fare: seatInfo.price,
-                    tax: seatInfo.tax,
+                    seat_number: seatPricing.seat_number,
+                    seat_class_id: seatPricing.seat_class_id || null,
+                    base_fare: seatPricing.base_price || 0,
+                    seat_adjustment: seatPricing.seat_adjustment || 0,
+                    tax: 0,
                     service_fee: 0,
-                    total_amount: seatInfo.price + seatInfo.tax
+                    total_amount: (seatPricing.base_price || 0) + (seatPricing.seat_adjustment || 0),
+                    status: 'issued',
+                    issued_at: new Date()
                 });
             }
         }

@@ -59,6 +59,7 @@ class VnpayController {
     async ipnUrl(req, res) {
 
         try {
+            console.log("🔔 VNPay IPN received aaaaaaaaaaaaaaaaaaa :", req.query);
             const vnp_Params = { ...req.query };
 
             // 1) Verify checksum

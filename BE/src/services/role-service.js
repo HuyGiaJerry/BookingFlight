@@ -42,6 +42,7 @@ class RoleService {
   // GET ALL ROLE AND PERMISSION
   async getAllRoleAndPermission() {
     return await this.roleRepository.getAllRoleAndPermissions();
+
   }
   // GET BY ID
   async getById(id) {
@@ -138,7 +139,11 @@ class RoleService {
     });
   }
 
-
+  async getRoleById(id) {
+    const roles = await this.roleRepository.getRoleById(id);
+    if (!roles) throw new AppError('Role not found', StatusCodes.NOT_FOUND);
+    return roles;
+  }
 }
 
 module.exports = RoleService;

@@ -1,5 +1,5 @@
 const { StatusCodes } = require('http-status-codes');
-const { UserService, TokenService } = require('../services');
+const { UserService, TokenService, RoleService } = require('../services');
 const { UserRepository, SessionRepository } = require('../repositories');
 const { Session } = require('../models')
 const resendProvider = require('../providers/resendProvider');
@@ -10,6 +10,8 @@ const userService = new UserService({
     userRepo: new UserRepository(),
     sessionRepo: new SessionRepository()
 });
+
+const roleService = new RoleService();
 
 async function signUp(req, res, next) {
     console.log('req.body:', req.body)
@@ -160,6 +162,8 @@ async function verifyOtp(req, res, next) {
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
+        const roles = await roleService.getRoleById(user.role_id);
+        const permissions = roles.rolePermissions?.map(rp => rp.permission) || []
 
         const accessToken = TokenService.createAccessToken({ userId: user.id });
         const refreshToken = TokenService.createRefreshToken();
@@ -177,7 +181,7 @@ async function verifyOtp(req, res, next) {
             httpOnly: true,
             secure: true, // true : bắt buộc dùng HTTPS
             sameSite: "none", // 'none' for cross-site, 'lax' or 'strict' for same-site
-            maxAge: 7 * 24 * 60 * 60 * 1000, 
+            maxAge: 7 * 24 * 60 * 60 * 1000,
         });
         // res.cookie('refreshToken', refreshToken, {
         //     httpOnly: true,
@@ -187,9 +191,23 @@ async function verifyOtp(req, res, next) {
         // });
 
         // Return access token
-        return res.status(StatusCodes.OK).json(responses.SuccessResponse({
-            accessToken
-        }));
+        console.log('User:', user)
+        console.log('Roles:', roles)
+        return res.status(StatusCodes.OK).json(responses.SuccessResponse(
+            {
+                user: {
+                    avatar: user.avatar,
+                    fullname: user.fullname,
+                    email: user.email,
+                    phone: user.phone
+                },
+                accessToken,
+                role: roles?.title || null,
+                permissions: permissions,
+            },
+            "Xác thực OTP thành công",
+            StatusCodes.OK
+        ));
 
     } catch (error) {
         next(error);

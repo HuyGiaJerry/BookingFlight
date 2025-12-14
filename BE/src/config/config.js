@@ -42,9 +42,10 @@ module.exports = {
         "host": process.env.RAILWAY_DB_HOST,
         "port": process.env.RAILWAY_DB_PORT || 3306,
         "dialect": process.env.DB_DIALECT || "mysql",
-        "ssl": {
-            "require": true,
-            "rejectUnauthorized": false
+        "dialectOptions": {
+            "ssl": {
+                "rejectUnauthorized": false
+            }
         },
         "logging": false,
         "define": {

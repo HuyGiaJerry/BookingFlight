@@ -1,9 +1,6 @@
 const vnpayService = require('../services/vnpay-service');
 const { verifySignature } = require('../utils/vnpay');
 const vnpayConfig = require('../config/vnpay');
-const { BookingService } = require("../services");
-
-const bookingService = new BookingService();
 
 class VnpayController {
 
@@ -37,15 +34,11 @@ class VnpayController {
         return res.json({
             success: true,
             paymentUrl,
-            
         });
     }
 
-
     returnUrl(req, res) {
         const vnp_Params = { ...req.query };
-
-        console.log("🔔 VNPay Return received:", vnp_Params);
 
         const isValid = verifySignature(vnp_Params, vnpayConfig.hashSecret);
 
@@ -54,7 +47,7 @@ class VnpayController {
         const amount = Number(vnp_Params.vnp_Amount) / 100;
 
         // ❗ URL FE — đổi theo domain FE của bạn
-        const FE_RETURN_URL = `${process.env.VNP_RETURNURL}`;
+        const FE_RETURN_URL = `${process.env.FE_URL}`;
 
         const redirectUrl = `${FE_RETURN_URL}?code=${code}&orderId=${orderId}&amount=${amount}`;
 

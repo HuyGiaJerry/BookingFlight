@@ -62,7 +62,7 @@ class VnpayService {
             vnp_OrderType: '250000',
             vnp_Amount: amount * 100,
             vnp_ReturnUrl: vnpayConfig.returnUrl,
-            // vnp_IpnUrl: vnpayConfig.ipnUrl,
+            vnp_IpnUrl: vnpayConfig.ipnUrl,
             vnp_IpAddr: ipAddr,
             vnp_CreateDate: createDate,
         };

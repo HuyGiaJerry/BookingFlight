@@ -1,3 +1,5 @@
+const { RoleRepository } = require('../repositories');
+const RoleService = require('./role-service');
 const TokenService = require('./token-service');
 const UserService = require('./user-service');
 
@@ -8,6 +10,7 @@ module.exports = {
     FlightService: require('./flight-service'),
     UserService: require('./user-service'),
     TokenService: require('./token-service'),
+    RoleService: require('./role-service'),
 
     PassengerService: require('./passenger-service'),
     SeatService: require('./seat-service'),

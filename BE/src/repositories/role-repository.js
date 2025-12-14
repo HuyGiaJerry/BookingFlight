@@ -35,6 +35,17 @@ class RoleRepository extends CrudRepository {
       ]
     });
   }
+  async getRoleById(id) {
+    return await this.model.findByPk(id, {
+      include: [
+        {
+          model: RolePermission,
+          as: 'rolePermissions',
+          attributes: ['permission']
+        }
+      ]
+    });
+  }
 }
 
 module.exports = RoleRepository;

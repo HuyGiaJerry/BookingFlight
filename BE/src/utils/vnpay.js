@@ -2,35 +2,35 @@ const crypto = require('crypto');
 const qs = require('qs');
 
 const sortObject = (obj) => {
-    const sorted = {};
-    Object.keys(obj)
+    return Object.keys(obj)
         .sort()
-        .forEach((key) => {
-            sorted[key] = obj[key];
-        });
-    return sorted;
+        .reduce((result, key) => {
+            result[key] = obj[key];
+            return result;
+        }, {});
 };
 
-const createSignature = (data, secret) => {
-    const signData = qs.stringify(data, { encode: false });
-    return crypto.createHmac('sha512', secret).update(signData, 'utf8').digest('hex');
+const createSignature = (params, secret) => {
+    const signData = qs.stringify(params, { encode: false });
+    return crypto
+        .createHmac('sha512', secret)
+        .update(signData, 'utf-8')
+        .digest('hex');
 };
 
 const verifySignature = (params, secret) => {
-    const secureHash = params.vnp_SecureHash;
+    const vnp_Params = { ...params };
+
+    const secureHash = vnp_Params.vnp_SecureHash;
     if (!secureHash) return false;
 
-    delete params.vnp_SecureHash;
-    delete params.vnp_SecureHashType;
+    delete vnp_Params.vnp_SecureHash;
+    delete vnp_Params.vnp_SecureHashType;
 
-    // 🔥 Encode lại giá trị giống lúc tạo payment URL
-    Object.keys(params).forEach((key) => {
-        params[key] = encodeURIComponent(params[key]).replace(/%20/g, '+');
-    });
-
-    const sortedParams = sortObject(params);
+    const sortedParams = sortObject(vnp_Params);
     const calculatedHash = createSignature(sortedParams, secret);
-    return secureHash === calculatedHash;
+
+    return calculatedHash === secureHash;
 };
 
 module.exports = { sortObject, createSignature, verifySignature };

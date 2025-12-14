@@ -12,7 +12,6 @@ module.exports = {
     PassengerService: require('./passenger-service'),
     SeatService: require('./seat-service'),
     BookingService: require('./booking-service'),
-    BookingPageService: require('./booking-page-service'),
     ServiceOfferService: require('./service-offer-service'),
     TicketService: require('./ticket-service'),
     FlightSummaryService: require('./flight-summary-service'),

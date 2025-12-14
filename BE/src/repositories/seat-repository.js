@@ -321,17 +321,29 @@ class SeatRepository extends CrudRepository {
                 ]
             });
 
-            return seats.map(seat => ({
-                seat_id: seat.id,
-                seat_number: seat.seatLayout.seat_number,
-                seat_class: seat.seatLayout.seatClass,
-                status: seat.status,
-                is_available: seat.status === 'available',
-                is_blocked: seat.status === 'blocked' &&
+            return seats.map(seat => {
+                const now = new Date();
+                const isBlockedAndValid =
+                    seat.status === 'blocked' &&
                     seat.blocked_until &&
-                    new Date(seat.blocked_until) > new Date(),
-                blocked_until: seat.blocked_until
-            }));
+                    new Date(seat.blocked_until) > now;
+
+                const isAvailable =
+                    seat.status === 'available' ||
+                    (seat.status === 'blocked' &&
+                        seat.blocked_until &&
+                        new Date(seat.blocked_until) <= now);
+
+                return {
+                    seat_id: seat.id,
+                    seat_number: seat.seatLayout.seat_number,
+                    seat_class: seat.seatLayout.seatClass,
+                    status: seat.status,
+                    is_available: isAvailable,
+                    is_blocked: isBlockedAndValid,
+                    blocked_until: seat.blocked_until
+                };
+            });
         } catch (error) {
             console.error('Error checking seat availability:', error);
             throw error;

@@ -15,31 +15,26 @@ class VnpayService {
             vnp_CurrCode: 'VND',
             vnp_TxnRef: orderId,
             vnp_OrderInfo: orderInfo,
-            vnp_OrderType: '250000',
-            vnp_Amount: amount * 100,
-            vnp_ReturnUrl: vnpayConfig.returnUrl,
+            vnp_OrderType: 'other',
+            vnp_Amount: Math.round(amount * 100),
+            vnp_ReturnUrl: vnpayConfig.returnUrl, // FE
+            vnp_IpnUrl: vnpayConfig.ipnUrl,       // ✅ IPN
             vnp_IpAddr: ipAddr,
             vnp_CreateDate: createDate,
         };
 
-        // ❗ Nếu có bankCode thì thêm, còn không thì bỏ hẳn
         if (bankCode) vnp_Params.vnp_BankCode = bankCode;
 
-        // 🔥 BƯỚC QUAN TRỌNG: encode từng giá trị giống tài liệu VNPay
-        Object.keys(vnp_Params).forEach((key) => {
-            vnp_Params[key] = encodeURIComponent(vnp_Params[key]).replace(/%20/g, '+');
-        });
-
-        // Sắp xếp key theo alphabet
+        // 1️⃣ SORT
         const sortedParams = sortObject(vnp_Params);
 
-        // Ký SHA512 trên chuỗi đã encode
+        // 2️⃣ SIGN
         const secureHash = createSignature(sortedParams, vnpayConfig.hashSecret);
-        sortedParams.vnp_SecureHash = secureHash;
-        // (tuỳ, có thể thêm)
-        // sortedParams.vnp_SecureHashType = 'SHA512';
 
-        // Tạo URL (KHÔNG encode thêm lần nữa)
+        // 3️⃣ APPEND HASH
+        sortedParams.vnp_SecureHash = secureHash;
+
+        // 4️⃣ BUILD URL
         return vnpayConfig.url + '?' + qs.stringify(sortedParams, { encode: false });
     }
 }

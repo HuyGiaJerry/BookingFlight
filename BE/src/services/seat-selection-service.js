@@ -26,7 +26,7 @@ class SeatSelectionService {
             console.log('🎯 === SEAT SELECTION START ===');
             console.log('Request payload:', { booking_session_id, flight_schedule_id, passenger_index, flight_seat_id });
 
-            // ✅ GET session
+            // ✅ GET unified session
             const session = await SessionManagerService.getUnifiedSession(booking_session_id);
 
             if (!session) {
@@ -39,29 +39,34 @@ class SeatSelectionService {
                 throw new AppError('Invalid session.', 400);
             }
 
-            // ✅ Validate seat availability
+            // ✅ 1. Release ghế cũ (nếu có) TRƯỚC
+            await this.releaseSeatForPassenger(session.id, flight_schedule_id, passenger_index);
+
+            // ✅ 2. Validate seat availability (sau khi đã release ghế cũ)
             const availability = await this.seatRepository.checkSeatAvailability([flight_seat_id]);
             if (!availability[0]?.is_available) {
                 throw new AppError('Seat is not available', 400);
             }
 
-            // ✅ Xóa , Cập nhật lại cái status,các trường khác... của ghế cũ (nếu có)
-            await this.releaseSeatForPassenger(session.id, flight_schedule_id, passenger_index);
-
-            // ✅ Block ghế mới chọn 15p 
+            // ✅ 3. Block ghế mới chọn 15p 
             const blocked = await this.seatRepository.blockSeats([flight_seat_id], session.id, 15);
             if (blocked !== 1) {
                 throw new AppError('Unable to block seat', 500);
             }
 
-            // ✅ Cập nhật sesion_data với ghế mới
-            const updatedSession = await this.updatePassengerSeatInSession(session, flight_schedule_id, passenger_index, flight_seat_id);
+            // ✅ 4. Cập nhật sesion_data với ghế mới
+            const updatedSession = await this.updatePassengerSeatInSession(
+                session,
+                flight_schedule_id,
+                passenger_index,
+                flight_seat_id
+            );
 
-            // ✅ Tính toán lại pricing
+            // ✅ 5. Tính toán lại pricing
             const flightPricing = await this.recalculateFlightPricing(updatedSession, flight_schedule_id);
             const sessionTotals = await SessionManagerService.calculateUnifiedTotal(updatedSession);
 
-            // ✅ Get seat details
+            // ✅ 6. Get seat details
             const seatDetails = await this.getSeatDetails(flight_seat_id, flight_schedule_id);
 
             return {
@@ -101,6 +106,18 @@ class SeatSelectionService {
                 throw new AppError('Booking session not found', 404);
             }
 
+            const sessionData = session.session_data || {};
+            const flightSelection = sessionData.seat_selections?.[flight_schedule_id];
+
+            let existingSelection = null;
+            if (flightSelection && Array.isArray(flightSelection.passenger_selections)) {
+                existingSelection = flightSelection.passenger_selections.find(
+                    (p) => p.passenger_index === passenger_index
+                );
+            }
+
+            const flightSeatId = existingSelection?.flight_seat_id || null;
+
             // ✅ Release ghế về available
             await this.releaseSeatForPassenger(booking_session_id, flight_schedule_id, passenger_index);
 
@@ -115,6 +132,7 @@ class SeatSelectionService {
                 booking_session_id,
                 flight_schedule_id,
                 passenger_index,
+                flight_seat_id: flightSeatId,   // ✅ Trả về seat id để FE biết ghế nào được unlock
                 seat_removed: true,
                 flight_seat_subtotal: flightPricing.total_seat_adjustment,
                 session_totals: sessionTotals,

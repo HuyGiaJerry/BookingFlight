@@ -31,29 +31,40 @@ function initSeatSelectionSocket(httpServer) {
         //  chọn ghế 
         socket.on('seat:select', async (payload, cb) => {
             try {
-                const result = await seatSelectionService.selectIndividualSeat({ ...payload, booking_session_id , flight_schedule_id });
+                const result = await seatSelectionService.selectIndividualSeat({
+                    ...payload,
+                    booking_session_id,
+                    flight_schedule_id
+                });
 
                 // real time đa người dùng 
                 socket.to(flightRoom).emit('seat:locked', {
-                    flight_seat_id: result.flight_seat_id,
+                    flight_seat_id: result.seat_selected.flight_seat_id,
                     passenger_index: result.passenger_index,
                     session: booking_session_id
                 });
 
-                // sync đa tab user -> userRoom
+                // sync đa tab user -> userRoom (các tab khác)
                 socket.to(userRoom).emit('seat:selected', result);
+                // ✅ gửi cho chính client hiện tại
+                socket.emit('seat:selected', result);
 
-                cb?.({success: true, data: result});
+                cb?.({ success: true, data: result });
             } catch (err) {
                 console.error('Error in seat:select socket event:', err);
-                cb?.({success: false, message: err.message});
+                cb?.({ success: false, message: err.message });
             }
         });
 
         //  bỏ ghế 
         socket.on('seat:remove', async (payload, cb) => {
             try {
-                const result = await seatSelectionService.removeSeatForPassenger({ ...payload, booking_session_id, flight_schedule_id });
+                const result = await seatSelectionService.removeSeatForPassenger({
+                    ...payload,
+                    booking_session_id,
+                    flight_schedule_id
+                });
+
                 // real time đa người dùng
                 socket.to(flightRoom).emit('seat:unlocked', {
                     flight_seat_id: result.flight_seat_id,
@@ -61,21 +72,22 @@ function initSeatSelectionSocket(httpServer) {
                 });
                 // sync đa tab user -> userRoom
                 socket.to(userRoom).emit('seat:removed', result);
+                // ✅ gửi cho chính client hiện tại
+                socket.emit('seat:removed', result);
 
-                cb?.({success: true, data: result});
+                cb?.({ success: true, data: result });
             } catch (err) {
                 console.error('Error in seat:remove socket event:', err);
-                cb?.({success: false, message: err.message});
+                cb?.({ success: false, message: err.message });
             }
         });
 
         socket.on('disconnect', () => {
-            console.log(`🔌 Socket disconnected: ${socket.id} left room ${room}`);
+            console.log(`🔌 Socket disconnected: ${socket.id}`);
         });
     });
 
     return io;
-
 }
 
 module.exports = initSeatSelectionSocket;

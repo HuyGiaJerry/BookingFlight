@@ -1,95 +1,61 @@
 require('dotenv').config();
 const express = require('express');
-const { Logger } = require('./config');
-const { SeatCleanupService } = require('./services')
+const { SeatCleanupService } = require('./services');
 const apiRouter = require('./routes');
 const { ErrorHandler } = require('./middlewares');
-const { ProtectedRoutes } = require('./middlewares')
 const initSeatSelectionSocket = require('./socket/seat-selection-socket');
-var cookieParser = require('cookie-parser');
+const cookieParser = require('cookie-parser');
 const { xss } = require('express-xss-sanitizer');
 const http = require('http');
-const app = express();
+const cors = require('cors');
 const { sequelize } = require('./models');
+
+const app = express();
+const server = http.createServer(app);  // <-- SERVER CHÍNH
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(xss());  
-const cors = require('cors');
-const server = http.createServer(app);
+app.use(xss());
+
 const allowedOrigins = [
     process.env.FRONTEND_URL_DEV?.trim(),
     process.env.FRONTEND_URL_DEPLOY?.trim(),
     "http://localhost:3001"
 ].filter(Boolean);
 
-// CORS — FIX QUAN TRỌNG
 app.use(
     cors({
         origin: (origin, callback) => {
             if (!origin) return callback(null, true);
-
-            if (allowedOrigins.includes(origin)) {
-                return callback(null, true);
-            }
-
+            if (allowedOrigins.includes(origin)) return callback(null, true);
             console.log("❌ Blocked by CORS:", origin);
             return callback(new Error("Not allowed by CORS"));
         },
         credentials: true,
     })
 );
+
+// --- IMPORTANT: Socket.IO attach vào server ---
 initSeatSelectionSocket(server);
 
 app.use('/api', apiRouter);
-// middleware xử lý lỗi
 app.use(ErrorHandler);
 
+// --- START SERVER (Express + Socket.io) ---
+server.listen(process.env.PORT || 3600, async () => {
+    console.log(`🚀 Server + Socket.IO running on port ${process.env.PORT || 3600}`);
 
-app.listen(process.env.PORT || 3600, async () => {
-    console.log(`🚀 Server is running on port ${process.env.PORT || 3600}`);
-    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`📊 Database: ${sequelize.config.database} @ ${sequelize.config.host}:${sequelize.config.port || 3306}`);
     try {
         await sequelize.authenticate();
-        console.log('✅ Database connection established successfully!');
-        // ✅ THÊM: Start auto-cleanup service AFTER database connection
-        console.log('🧹 Starting seat cleanup service...');
+        console.log('✅ Database connected');
+
         const seatCleanupService = new SeatCleanupService();
         seatCleanupService.startAutoCleanup();
-
-        // Store globally để có thể stop khi shutdown
         global.seatCleanupService = seatCleanupService;
+
     } catch (error) {
-        console.error('❌ Unable to connect to database:', error.message);
-        process.exit(1); // thoát ứng dụng nếu không kết nối được DB
+        console.error('❌ DB connection err:', error.message);
+        process.exit(1);
     }
-    // Logger.info("Successfully started the server", "root", {});
-});
-
-// ✅ THÊM: Graceful shutdown handlers
-process.on('SIGTERM', () => {
-    console.log('📋 SIGTERM received, shutting down gracefully...');
-    if (global.seatCleanupService) {
-        global.seatCleanupService.stopAutoCleanup();
-    }
-    process.exit(0);
-});
-
-process.on('SIGINT', () => {
-    console.log('📋 SIGINT received (Ctrl+C), shutting down gracefully...');
-    if (global.seatCleanupService) {
-        global.seatCleanupService.stopAutoCleanup();
-    }
-    process.exit(0);
-});
-
-// ✅ THÊM: Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-    console.error('❌ Uncaught Exception:', error);
-    if (global.seatCleanupService) {
-        global.seatCleanupService.stopAutoCleanup();
-    }
-    process.exit(1);
-
 });

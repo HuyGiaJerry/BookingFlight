@@ -571,7 +571,7 @@ class SeatService {
                 !seatClassName || seat.seat_class.class_name === seatClassName;
 
             return {
-                flightSeatId: seat.id,
+                flightSeatId: seat.seat_id,
                 seatNumber: seat.seat_number,
                 row: seat.seat_row,
                 column: seat.seat_column,

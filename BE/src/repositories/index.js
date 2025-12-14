@@ -1,7 +1,3 @@
-const RoleRepository = require('./role-repository');
-const SeatClassRepository = require('./seat-class-repository');
-const sessionRepository = require('./session-repository');
-const UserRepository = require('./user-repository');
 
 module.exports = {
     AirportRepository: require('./airport-repository'),
@@ -18,4 +14,5 @@ module.exports = {
     ServicesRepository: require('./services-repository'),
     TicketRepository: require('./ticket-repository'),
     SeatClassRepository: require('./seat-class-repository'),
+
 }

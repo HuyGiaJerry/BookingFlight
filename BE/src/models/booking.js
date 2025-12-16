@@ -20,6 +20,9 @@ module.exports = (sequelize, DataTypes) => {
 
       // Booking has many BookingServiceItems
       Booking.hasMany(models.BookingServiceItem, { foreignKey: 'booking_id', as: 'bookingServiceItems' } );
+
+      // Booking has one Payment
+      Booking.hasOne(models.Payment, { foreignKey: 'booking_id', as: 'payment' } );
     }
   }
   Booking.init({

@@ -4,6 +4,8 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('Payments', {
       id: {
+        allowNull: false,
+        primaryKey: true,
         type: Sequelize.UUID
       },
       booking_id: {

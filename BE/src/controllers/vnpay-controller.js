@@ -2,7 +2,9 @@ const vnpayService = require('../services/vnpay-service');
 const { verifySignature } = require('../utils/vnpay');
 const vnpayConfig = require('../config/vnpay');
 const AppError = require('../utils/errors/app-error');
+const {BookingService} = require('../services');
 
+const bookingService = new BookingService();
 class VnpayController {
 
     // POST /vnpay/create - client gọi để lấy paymentUrl

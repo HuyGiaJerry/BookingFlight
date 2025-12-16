@@ -64,6 +64,7 @@ class BookingService {
 
 
     async confirmBooking({ bookingSessionId, amount, transactionId, rawData }) {
+        console.log("✅ 1 Confirming booking for session:", bookingSessionId);
         // 1) Lấy session booking
         const session = await BookingSession.findByPk(bookingSessionId);
         if (!session) throw new AppError("BookingSession not found", StatusCodes.NOT_FOUND);
@@ -191,6 +192,7 @@ class BookingService {
         await BookingSession.destroy({
             where: { id: bookingSessionId }
         });
+        console.log("✅ 2 Booking confirmed with ID:", booking.id);
 
         return { bookingId: booking.id };
     }

@@ -1,6 +1,7 @@
 const vnpayService = require('../services/vnpay-service');
 const { verifySignature } = require('../utils/vnpay');
 const vnpayConfig = require('../config/vnpay');
+const AppError = require('../utils/errors/app-error');
 
 class VnpayController {
 
@@ -37,22 +38,54 @@ class VnpayController {
         });
     }
 
-    returnUrl(req, res) {
-        const vnp_Params = { ...req.query };
+    // returnUrl(req, res) {
+    //     const vnp_Params = { ...req.query };
 
-        const isValid = verifySignature(vnp_Params, vnpayConfig.hashSecret);
+    //     const isValid = verifySignature(vnp_Params, vnpayConfig.hashSecret);
 
-        const code = vnp_Params.vnp_ResponseCode;
-        const orderId = vnp_Params.vnp_TxnRef;
-        const amount = Number(vnp_Params.vnp_Amount) / 100;
+    //     const code = vnp_Params.vnp_ResponseCode;
+    //     const orderId = vnp_Params.vnp_TxnRef;
+    //     const amount = Number(vnp_Params.vnp_Amount) / 100;
 
-        // ❗ URL FE — đổi theo domain FE của bạn
-        const FE_RETURN_URL = `${process.env.FE_URL}`;
+    //     // ❗ URL FE — đổi theo domain FE của bạn
+    //     const FE_RETURN_URL = `${process.env.FE_URL}`;
 
-        const redirectUrl = `${FE_RETURN_URL}?code=${code}&orderId=${orderId}&amount=${amount}`;
+    //     const redirectUrl = `${FE_RETURN_URL}?code=${code}&orderId=${orderId}&amount=${amount}`;
 
-        return res.redirect(redirectUrl);
+    //     return res.redirect(redirectUrl);
+    // }
+
+    // Config sauuu 
+    async returnUrl(req, res) {
+        const {
+            vnp_ResponseCode,
+            vnp_TxnRef,
+            vnp_Amount,
+            vnp_OrderInfo
+        } = req.query;
+
+        // ❌ KHÔNG VERIFY CŨNG ĐƯỢC (bài/demo)
+        if (vnp_ResponseCode === '00') {
+            const [, bookingSessionId] = vnp_OrderInfo.split('|');
+
+            // ✅ LƯU DB TẠI ĐÂY
+            await bookingService.confirmBooking({
+                bookingSessionId,
+                amount: vnp_Amount / 100,
+                transactionId: vnp_TxnRef,
+                rawData: req.query
+            });
+        }
+        else {
+            throw new AppError('Payment failed', 400);
+        }
+
+        // redirect FE
+        res.redirect(
+            `${process.env.FE_URL}/vnpay/result?code=${vnp_ResponseCode}`
+        );
     }
+
 
     // GET /vnpay/ipn - VNPay gọi server → phải verify và update DB
     async ipnUrl(req, res) {

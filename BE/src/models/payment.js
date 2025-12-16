@@ -12,7 +12,12 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Payment.init({
-    id: DataTypes.UUID,
+    id: {
+      type: DataTypes.UUID,
+      primaryKey: true,
+      allowNull: false, 
+      defaultValue: DataTypes.UUIDV4
+    },
     booking_id: DataTypes.INTEGER,
     amount: DataTypes.DECIMAL(15,2),
     payment_method: DataTypes.STRING(50),
@@ -22,6 +27,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Payment',
+    tableName: 'Payments',
   });
   return Payment;
 };
